@@ -13,6 +13,21 @@ builder.Services.AddHttpClient();
 builder.Services.AddDbContext<BudgetDbContext>(options =>
 	options.UseSqlite(builder.Configuration.GetConnectionString("BudgetDatabase")));
 
+var defaultCorsOrigins = new[]
+{
+	"http://localhost:5173",
+	"http://127.0.0.1:5173",
+	"http://localhost:5174",
+	"http://127.0.0.1:5174"
+};
+var configuredCorsOrigins =
+	builder.Configuration["Cors:AllowedOrigins"] ??
+	Environment.GetEnvironmentVariable("CORS_ORIGINS");
+var allowedCorsOrigins = string.IsNullOrWhiteSpace(configuredCorsOrigins)
+	? defaultCorsOrigins
+	: configuredCorsOrigins
+		.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
 // Add JWT authentication
 var jwtSecret = builder.Configuration["JwtSecret"] ?? "your-secret-key-change-this-in-production-12345";
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -32,7 +47,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddCors(options =>
 	options.AddPolicy("frontend", policy => policy
-		.WithOrigins("http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174", "http://127.0.0.1:5174")
+		.WithOrigins(allowedCorsOrigins)
 		.AllowAnyHeader()
 		.AllowAnyMethod()));
 
