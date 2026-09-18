@@ -1,0 +1,402 @@
+﻿[
+    {
+        "Transaction name":  "Rent payment",
+        "Cost":  2948
+    },
+    {
+        "Transaction name":  "Train ticket",
+        "Cost":  334
+    },
+    {
+        "Transaction name":  "Gas station fill-up",
+        "Cost":  45.08
+    },
+    {
+        "Transaction name":  "Sleep app subscription",
+        "Cost":  5
+    },
+    {
+        "Transaction name":  "Grocery shopping",
+        "Cost":  143.97
+    },
+    {
+        "Transaction name":  "Gym day pass",
+        "Cost":  76
+    },
+    {
+        "Transaction name":  "Haircut",
+        "Cost":  43.25
+    },
+    {
+        "Transaction name":  "Chinese takeout",
+        "Cost":  91.86
+    },
+    {
+        "Transaction name":  "Table lamps",
+        "Cost":  130
+    },
+    {
+        "Transaction name":  "Pet supplies",
+        "Cost":  127.97
+    },
+    {
+        "Transaction name":  "Property tax payment",
+        "Cost":  737.97
+    },
+    {
+        "Transaction name":  "Round-trip flights",
+        "Cost":  613.94
+    },
+    {
+        "Transaction name":  "Rideshare home",
+        "Cost":  11.96
+    },
+    {
+        "Transaction name":  "Fitness class subscription",
+        "Cost":  44
+    },
+    {
+        "Transaction name":  "Small grocery run",
+        "Cost":  36.64
+    },
+    {
+        "Transaction name":  "Driving range practice",
+        "Cost":  12
+    },
+    {
+        "Transaction name":  "Nail salon visit",
+        "Cost":  105.75
+    },
+    {
+        "Transaction name":  "Sushi dinner",
+        "Cost":  68.21
+    },
+    {
+        "Transaction name":  "Picture framing",
+        "Cost":  275.2
+    },
+    {
+        "Transaction name":  "Veterinary visit",
+        "Cost":  261.22
+    },
+    {
+        "Transaction name":  "Home insurance premium",
+        "Cost":  171.67
+    },
+    {
+        "Transaction name":  "Airline seat upgrade",
+        "Cost":  40
+    },
+    {
+        "Transaction name":  "Car wash",
+        "Cost":  30
+    },
+    {
+        "Transaction name":  "TV streaming subscription",
+        "Cost":  8
+    },
+    {
+        "Transaction name":  "Farmers market groceries",
+        "Cost":  57.2
+    },
+    {
+        "Transaction name":  "Bowling outing",
+        "Cost":  32
+    },
+    {
+        "Transaction name":  "Dress shirt",
+        "Cost":  64.19
+    },
+    {
+        "Transaction name":  "Coffee shop stop",
+        "Cost":  4.06
+    },
+    {
+        "Transaction name":  "Propane refill",
+        "Cost":  45.48
+    },
+    {
+        "Transaction name":  "Pet medication",
+        "Cost":  73.62
+    },
+    {
+        "Transaction name":  "Auto insurance premium",
+        "Cost":  240.67
+    },
+    {
+        "Transaction name":  "Checked baggage fee",
+        "Cost":  42
+    },
+    {
+        "Transaction name":  "Electric scooter rental",
+        "Cost":  6.35
+    },
+    {
+        "Transaction name":  "Music streaming subscription",
+        "Cost":  10
+    },
+    {
+        "Transaction name":  "Almonds",
+        "Cost":  12.33
+    },
+    {
+        "Transaction name":  "Concert tickets",
+        "Cost":  517.95
+    },
+    {
+        "Transaction name":  "Sports coat",
+        "Cost":  370.98
+    },
+    {
+        "Transaction name":  "Bakery cookie",
+        "Cost":  7.98
+    },
+    {
+        "Transaction name":  "Garden flowers",
+        "Cost":  140.91
+    },
+    {
+        "Transaction name":  "Dog food",
+        "Cost":  45.99
+    },
+    {
+        "Transaction name":  "Pet insurance premium",
+        "Cost":  120.77
+    },
+    {
+        "Transaction name":  "Car rental",
+        "Cost":  192.94
+    },
+    {
+        "Transaction name":  "Parking garage",
+        "Cost":  25
+    },
+    {
+        "Transaction name":  "Juice membership",
+        "Cost":  10
+    },
+    {
+        "Transaction name":  "Protein powder",
+        "Cost":  40.49
+    },
+    {
+        "Transaction name":  "Pickleball court reservation",
+        "Cost":  15
+    },
+    {
+        "Transaction name":  "Sunglasses",
+        "Cost":  67.58
+    },
+    {
+        "Transaction name":  "Mexican restaurant dinner",
+        "Cost":  97.25
+    },
+    {
+        "Transaction name":  "Air filters",
+        "Cost":  50.58
+    },
+    {
+        "Transaction name":  "Dog shampoo",
+        "Cost":  30
+    },
+    {
+        "Transaction name":  "Dental copay",
+        "Cost":  40
+    },
+    {
+        "Transaction name":  "Wedding hotel stay",
+        "Cost":  427.15
+    },
+    {
+        "Transaction name":  "Toll account reload",
+        "Cost":  35
+    },
+    {
+        "Transaction name":  "Clothing rental subscription",
+        "Cost":  103.88
+    },
+    {
+        "Transaction name":  "Vitamins",
+        "Cost":  91.88
+    },
+    {
+        "Transaction name":  "Sports game drinks",
+        "Cost":  40.55
+    },
+    {
+        "Transaction name":  "Baseball cap",
+        "Cost":  82.56
+    },
+    {
+        "Transaction name":  "Italian restaurant meal",
+        "Cost":  57.77
+    },
+    {
+        "Transaction name":  "Kitchen stool",
+        "Cost":  343.6
+    },
+    {
+        "Transaction name":  "Dog training classes",
+        "Cost":  350
+    },
+    {
+        "Transaction name":  "Electric bill",
+        "Cost":  107.84
+    },
+    {
+        "Transaction name":  "Weekend hotel stay",
+        "Cost":  485.08
+    },
+    {
+        "Transaction name":  "Vehicle registration and parking permit",
+        "Cost":  157
+    },
+    {
+        "Transaction name":  "Gym membership",
+        "Cost":  50.02
+    },
+    {
+        "Transaction name":  "Coffee capsules",
+        "Cost":  129.6
+    },
+    {
+        "Transaction name":  "Stadium snacks",
+        "Cost":  17
+    },
+    {
+        "Transaction name":  "Shoes",
+        "Cost":  150.72
+    },
+    {
+        "Transaction name":  "Pizza delivery",
+        "Cost":  31.76
+    },
+    {
+        "Transaction name":  "Lawn sod",
+        "Cost":  67.78
+    },
+    {
+        "Transaction name":  "Dog toy",
+        "Cost":  13
+    },
+    {
+        "Transaction name":  "Natural gas bill",
+        "Cost":  77.21
+    },
+    {
+        "Transaction name":  "Airport snacks",
+        "Cost":  19.26
+    },
+    {
+        "Transaction name":  "Oil change and engine filter",
+        "Cost":  173.37
+    },
+    {
+        "Transaction name":  "Nutrition tracking subscription",
+        "Cost":  20
+    },
+    {
+        "Transaction name":  "Overnight oats",
+        "Cost":  45
+    },
+    {
+        "Transaction name":  "Golf outing",
+        "Cost":  12.65
+    },
+    {
+        "Transaction name":  "Pajamas",
+        "Cost":  46.3
+    },
+    {
+        "Transaction name":  "Brunch",
+        "Cost":  108.9
+    },
+    {
+        "Transaction name":  "Spray paint",
+        "Cost":  23.28
+    },
+    {
+        "Transaction name":  "Pet grooming",
+        "Cost":  135
+    },
+    {
+        "Transaction name":  "Water bill",
+        "Cost":  60.71
+    },
+    {
+        "Transaction name":  "Travel umbrella",
+        "Cost":  32.08
+    },
+    {
+        "Transaction name":  "Auto repair",
+        "Cost":  154.96
+    },
+    {
+        "Transaction name":  "Professional networking subscription",
+        "Cost":  74.19
+    },
+    {
+        "Transaction name":  "Wine purchase",
+        "Cost":  35.9
+    },
+    {
+        "Transaction name":  "Movie tickets",
+        "Cost":  25.05
+    },
+    {
+        "Transaction name":  "Portable phone charger",
+        "Cost":  47.69
+    },
+    {
+        "Transaction name":  "Ice cream",
+        "Cost":  16.61
+    },
+    {
+        "Transaction name":  "Pest control service",
+        "Cost":  79.5
+    },
+    {
+        "Transaction name":  "Dog sitter",
+        "Cost":  225
+    },
+    {
+        "Transaction name":  "Internet service",
+        "Cost":  65
+    },
+    {
+        "Transaction name":  "Airport transfer",
+        "Cost":  37.82
+    },
+    {
+        "Transaction name":  "Vehicle inspection",
+        "Cost":  277.32
+    },
+    {
+        "Transaction name":  "Annual online shopping membership",
+        "Cost":  147.34
+    },
+    {
+        "Transaction name":  "Cookies",
+        "Cost":  30
+    },
+    {
+        "Transaction name":  "Couples massage",
+        "Cost":  300
+    },
+    {
+        "Transaction name":  "Beauty products",
+        "Cost":  67.4
+    },
+    {
+        "Transaction name":  "Smoothie bowl",
+        "Cost":  13.03
+    },
+    {
+        "Transaction name":  "Dishwasher detergent",
+        "Cost":  24.31
+    },
+    {
+        "Transaction name":  "Dog harness",
+        "Cost":  50
+    }
+]

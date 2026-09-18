@@ -1,0 +1,64 @@
+@backend_HostAddress = http://localhost:5080
+
+GET {{backend_HostAddress}}/health
+Accept: application/json
+
+###
+
+GET {{backend_HostAddress}}/api/categories?username=jriley
+Accept: application/json
+
+###
+
+GET {{backend_HostAddress}}/api/transactions?username=jriley
+Accept: application/json
+
+###
+
+GET {{backend_HostAddress}}/api/transactions?username=jriley&status=pending
+Accept: application/json
+
+###
+
+GET {{backend_HostAddress}}/api/transactions?username=jriley&month=2026-09&categoryId=groceries
+Accept: application/json
+
+###
+
+GET {{backend_HostAddress}}/api/transactions/tx-2015?username=jriley
+Accept: application/json
+
+###
+
+POST {{backend_HostAddress}}/api/transactions?username=jriley
+Content-Type: application/json
+
+{
+  "date": "2026-09-14",
+  "merchant": "Test Coffee Shop",
+  "rawDescription": "TEST COFFEE SHOP 0001",
+  "amount": 6.5,
+  "categoryId": null,
+  "accountId": "card-a7",
+  "status": "posted",
+  "source": "manual",
+  "notes": "",
+  "spreadMonths": 1
+}
+
+###
+
+# Categorize the transaction created above — swap the id for the one returned by the POST.
+PUT {{backend_HostAddress}}/api/transactions/REPLACE_WITH_NEW_ID?username=jriley
+Content-Type: application/json
+
+{
+  "categoryId": "dining",
+  "categorizationSource": "Manual selection"
+}
+
+###
+
+# Expect 404 — no BudgetProfile row exists for jriley (setup wizard was never called by the frontend).
+GET {{backend_HostAddress}}/api/budget-setup?username=jriley
+Accept: application/json

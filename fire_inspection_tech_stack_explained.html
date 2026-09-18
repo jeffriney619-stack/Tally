@@ -1,0 +1,789 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Understanding the Fire Inspection Tool Tech Stack</title>
+  <style>
+    :root {
+      --ink: #17201d;
+      --muted: #59645f;
+      --paper: #f5f2ea;
+      --surface: #fffefa;
+      --line: #d7d7ce;
+      --green: #176b52;
+      --green-soft: #dcece4;
+      --red: #a63d32;
+      --red-soft: #f4dfd9;
+      --blue: #245f8f;
+      --blue-soft: #dce8f2;
+      --gold: #9a6a15;
+      --gold-soft: #f3e6c7;
+      --max-width: 1120px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 24px;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background-color: var(--paper);
+      background-image:
+        linear-gradient(rgba(23, 32, 29, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(23, 32, 29, 0.035) 1px, transparent 1px);
+      background-size: 24px 24px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 17px;
+      line-height: 1.72;
+    }
+
+    a { color: var(--green); }
+
+    a:focus-visible,
+    summary:focus-visible {
+      outline: 3px solid var(--gold);
+      outline-offset: 3px;
+    }
+
+    .masthead {
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 254, 250, 0.94);
+    }
+
+    .masthead-inner,
+    main,
+    footer {
+      width: min(calc(100% - 32px), var(--max-width));
+      margin-inline: auto;
+    }
+
+    .masthead-inner {
+      display: grid;
+      grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.7fr);
+      gap: 56px;
+      align-items: end;
+      padding: 64px 0 48px;
+    }
+
+    .eyebrow,
+    .section-number,
+    nav,
+    th,
+    .label,
+    .flow-step,
+    .prompt-box strong,
+    .legend {
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+      letter-spacing: 0;
+    }
+
+    .eyebrow {
+      margin: 0 0 12px;
+      color: var(--red);
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin-top: 0;
+      line-height: 1.12;
+      letter-spacing: 0;
+      text-wrap: balance;
+    }
+
+    h1 {
+      max-width: 820px;
+      margin-bottom: 20px;
+      font-size: clamp(2.5rem, 7vw, 5.8rem);
+      font-weight: 500;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      font-weight: 500;
+    }
+
+    h3 {
+      margin-bottom: 10px;
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+      font-size: 1.1rem;
+    }
+
+    p { margin: 0 0 18px; }
+
+    .dek {
+      max-width: 760px;
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 1.22rem;
+    }
+
+    .thesis {
+      padding-left: 24px;
+      border-left: 5px solid var(--green);
+    }
+
+    .thesis strong {
+      display: block;
+      margin-bottom: 8px;
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+    }
+
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      overflow-x: auto;
+      border-bottom: 1px solid var(--line);
+      background: rgba(245, 242, 234, 0.96);
+      scrollbar-width: thin;
+    }
+
+    .nav-inner {
+      display: flex;
+      width: min(calc(100% - 32px), var(--max-width));
+      margin-inline: auto;
+      gap: 6px;
+      padding: 10px 0;
+    }
+
+    nav a {
+      flex: 0 0 auto;
+      padding: 7px 10px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    nav a:hover { color: var(--green); }
+
+    main { background: var(--surface); }
+
+    section {
+      padding: 72px 64px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .section-number {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--red);
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .lead {
+      max-width: 820px;
+      color: var(--muted);
+      font-size: 1.16rem;
+    }
+
+    .two-column {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 28px;
+      margin-top: 32px;
+    }
+
+    .comparison {
+      padding: 28px;
+      border-top: 5px solid var(--blue);
+      background: var(--blue-soft);
+    }
+
+    .comparison:last-child {
+      border-color: var(--green);
+      background: var(--green-soft);
+    }
+
+    .comparison .label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .comparison p:last-child { margin-bottom: 0; }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin: 34px 0 16px;
+    }
+
+    .flow-step {
+      position: relative;
+      min-height: 128px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      background: white;
+      font-size: 0.9rem;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .flow-step::after {
+      content: "→";
+      position: absolute;
+      top: 50%;
+      right: -14px;
+      z-index: 1;
+      width: 26px;
+      color: var(--red);
+      background: var(--surface);
+      text-align: center;
+      transform: translateY(-50%);
+    }
+
+    .flow-step:last-child::after { content: none; }
+
+    .flow-step span {
+      display: block;
+      margin-bottom: 18px;
+      color: var(--red);
+      font-size: 1.8rem;
+      font-weight: 400;
+    }
+
+    .table-wrap {
+      margin-top: 30px;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      font-size: 0.94rem;
+      line-height: 1.45;
+    }
+
+    th,
+    td {
+      padding: 15px 18px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: white;
+      background: var(--ink);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+    tbody tr:nth-child(even) { background: #f7f7f2; }
+
+    .callout {
+      margin: 32px 0;
+      padding: 26px 30px;
+      border-left: 5px solid var(--gold);
+      background: var(--gold-soft);
+    }
+
+    .callout.danger {
+      border-color: var(--red);
+      background: var(--red-soft);
+    }
+
+    .callout h3 { margin-bottom: 8px; }
+    .callout p:last-child { margin-bottom: 0; }
+
+    ul,
+    ol { padding-left: 24px; }
+    li { margin-bottom: 10px; padding-left: 6px; }
+
+    .failure-list {
+      columns: 2;
+      column-gap: 48px;
+      margin-top: 28px;
+    }
+
+    .failure-list li { break-inside: avoid; }
+
+    .timeline {
+      margin: 34px 0 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: lesson;
+    }
+
+    .timeline li {
+      display: grid;
+      grid-template-columns: 54px minmax(0, 1fr);
+      gap: 18px;
+      margin: 0;
+      padding: 0 0 26px;
+      counter-increment: lesson;
+    }
+
+    .timeline li::before {
+      content: counter(lesson, decimal-leading-zero);
+      display: grid;
+      width: 46px;
+      height: 46px;
+      place-items: center;
+      color: white;
+      background: var(--green);
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .timeline strong {
+      display: block;
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+      font-size: 1rem;
+    }
+
+    .prompt-box {
+      margin-top: 30px;
+      padding: 30px;
+      color: #f7f4eb;
+      background: var(--ink);
+      font-size: 1.02rem;
+    }
+
+    .prompt-box strong {
+      display: block;
+      margin-bottom: 12px;
+      color: #abd8c7;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+    }
+
+    .fit-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1px;
+      margin-top: 32px;
+      border: 1px solid var(--line);
+      background: var(--line);
+    }
+
+    .fit {
+      padding: 28px;
+      background: white;
+    }
+
+    .fit.good h3 { color: var(--green); }
+    .fit.poor h3 { color: var(--red); }
+
+    .examples {
+      display: grid;
+      gap: 1px;
+      margin-top: 34px;
+      border: 1px solid var(--line);
+      background: var(--line);
+    }
+
+    details { background: white; }
+
+    summary {
+      display: grid;
+      grid-template-columns: 50px minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: center;
+      padding: 24px 28px;
+      cursor: pointer;
+      font-weight: 700;
+      list-style: none;
+    }
+
+    summary::-webkit-details-marker { display: none; }
+
+    summary::after {
+      content: "+";
+      color: var(--green);
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+      font-size: 1.6rem;
+      font-weight: 400;
+    }
+
+    details[open] summary::after { content: "−"; }
+
+    .example-number {
+      color: var(--red);
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+      font-size: 0.78rem;
+    }
+
+    .example-body {
+      padding: 0 28px 28px 96px;
+    }
+
+    .slice {
+      margin: 18px 0;
+      padding: 16px 18px;
+      border-left: 4px solid var(--blue);
+      background: var(--blue-soft);
+      font-family: Consolas, monospace;
+      font-size: 0.88rem;
+      line-height: 1.6;
+    }
+
+    .closing {
+      padding: 60px 64px;
+      color: white;
+      background: var(--green);
+    }
+
+    .closing h2 { max-width: 900px; margin-bottom: 16px; }
+    .closing p { max-width: 780px; margin-bottom: 0; color: #e3f1eb; }
+
+    footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 24px 0 42px;
+      color: var(--muted);
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+      font-size: 0.78rem;
+    }
+
+    @media (max-width: 767px) {
+      body { font-size: 16px; }
+
+      .masthead-inner {
+        grid-template-columns: 1fr;
+        gap: 30px;
+        padding: 44px 0 34px;
+      }
+
+      h1 { font-size: 2.7rem; }
+
+      section,
+      .closing { padding: 52px 22px; }
+
+      .two-column,
+      .fit-grid { grid-template-columns: 1fr; }
+
+      .flow { grid-template-columns: 1fr; }
+
+      .flow-step { min-height: 0; }
+
+      .flow-step::after {
+        content: "↓";
+        top: auto;
+        right: 50%;
+        bottom: -18px;
+        transform: translateX(50%);
+      }
+
+      .failure-list { columns: 1; }
+
+      summary {
+        grid-template-columns: 34px minmax(0, 1fr) auto;
+        gap: 10px;
+        padding: 20px;
+      }
+
+      .example-body { padding: 0 20px 24px; }
+
+      footer { flex-direction: column; }
+    }
+
+    @media print {
+      body { background: white; font-size: 11pt; }
+      nav { display: none; }
+      main { width: 100%; }
+      section { break-inside: avoid; padding: 30px 0; }
+      details .example-body { display: block; }
+    }
+  </style>
+</head>
+<body>
+  <header class="masthead">
+    <div class="masthead-inner">
+      <div>
+        <p class="eyebrow">Product manager's field guide</p>
+        <h1>Understanding the Fire Inspection Tool Tech Stack</h1>
+        <p class="dek">Why the architecture exists, what the kickoff prompt really does, what is reusable, and how the same approach applies to dealer backend and panel firmware products.</p>
+      </div>
+      <aside class="thesis" aria-label="Central idea">
+        <strong>The central idea</strong>
+        The stack is the set of building materials. The kickoff prompt is the construction process, quality plan, and operating manual.
+      </aside>
+    </div>
+  </header>
+
+  <nav aria-label="Page sections">
+    <div class="nav-inner">
+      <a href="#distinction">Stack vs. prompt</a>
+      <a href="#product">The product</a>
+      <a href="#layers">Technology layers</a>
+      <a href="#origin">How it evolved</a>
+      <a href="#without">Without the prompt</a>
+      <a href="#minimum">Reusable minimum</a>
+      <a href="#fit">Project fit</a>
+      <a href="#examples">Your product world</a>
+      <a href="#improvements">Improvements</a>
+    </div>
+  </nav>
+
+  <main>
+    <section id="distinction">
+      <span class="section-number">01 / The distinction</span>
+      <h2>Two documents, two different jobs</h2>
+      <p class="lead">The Word document names the technologies and broad architecture. The kickoff prompt converts those choices into repeatable instructions that an AI agent can execute and verify.</p>
+      <div class="two-column">
+        <article class="comparison">
+          <span class="label">The tech stack</span>
+          <h3>What will be used</h3>
+          <p>React, TypeScript, C#, SQL Server, tests, automation, and separate frontend and backend repositories. It is a blueprint of the major building materials.</p>
+        </article>
+        <article class="comparison">
+          <span class="label">The kickoff prompt</span>
+          <h3>How it will be built</h3>
+          <p>Installation, architecture, folder boundaries, conventions, verification gates, documentation, and handoff. It is the repeatable construction and inspection process.</p>
+        </article>
+      </div>
+      <div class="callout">
+        <h3>Why the distinction matters</h3>
+        <p>“Use React and C#” leaves hundreds of decisions unresolved. The prompt removes ambiguity about where code belongs, how services communicate, what counts as complete, and how future AI sessions should continue the work.</p>
+      </div>
+    </section>
+
+    <section id="product">
+      <span class="section-number">02 / The actual product</span>
+      <h2>This is an operational system, not merely a website</h2>
+      <p class="lead">The application must collect evidence, enforce rules, preserve history, and produce formal output. That is a much larger responsibility than displaying information on web pages.</p>
+      <div class="flow" aria-label="Inspection workflow">
+        <div class="flow-step"><span>01</span>Import or manually enter equipment</div>
+        <div class="flow-step"><span>02</span>Create an inspection and test each device</div>
+        <div class="flow-step"><span>03</span>Record pass, fail, reasons, and corrections</div>
+        <div class="flow-step"><span>04</span>Finalize and generate the inspection report</div>
+      </div>
+      <p>The full system also needs authentication, dealer and account permissions, durable records, validation, audit history, report storage, deployment, and recovery from errors. That is why a full-stack architecture was selected instead of a spreadsheet, static page, or quick prototype.</p>
+      <div class="callout danger">
+        <h3>Important: technology does not create regulatory compliance</h3>
+        <p>A well-tested PDF is not automatically a compliant inspection report. Compliance depends on the applicable jurisdiction, Authority Having Jurisdiction, NFPA standard and edition, local amendments, required fields, testing frequency, licensing, signatures, retention, and correction rules. Those must be captured as product requirements and reviewed by qualified domain experts.</p>
+      </div>
+    </section>
+
+    <section id="layers">
+      <span class="section-number">03 / Technology layers</span>
+      <h2>Why every part is there</h2>
+      <p class="lead">The choices are optimized for a business application and for AI-assisted development. Each tool either gives structure to the product or gives rapid feedback when implementation is wrong.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Technology or pattern</th><th>Job in the system</th><th>Why it helps</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>React</strong></td><td>Builds the dealer-facing interface</td><td>Well suited to forms, equipment tables, filters, inspection workflows, and reusable controls.</td></tr>
+            <tr><td><strong>TypeScript</strong></td><td>Adds type checking to frontend code</td><td>Detects incorrect data and API usage before the application runs, giving both developers and AI precise feedback.</td></tr>
+            <tr><td><strong>React Router</strong></td><td>Organizes pages and navigation</td><td>Provides predictable routes for sites, systems, inspections, equipment, and reports.</td></tr>
+            <tr><td><strong>Tailwind + shadcn/ui</strong></td><td>Supplies styling and controls</td><td>Creates consistent forms, dialogs, tables, buttons, and error states without inventing every component.</td></tr>
+            <tr><td><strong>TanStack Query</strong></td><td>Manages server data in the browser</td><td>Standardizes loading, caching, refreshes, errors, and updates after records change.</td></tr>
+            <tr><td><strong>Zod</strong></td><td>Validates browser form data</td><td>Stops incomplete or malformed inspection data before it is submitted.</td></tr>
+            <tr><td><strong>react-intl</strong></td><td>Centralizes visible language</td><td>Prepares for localization and prevents text from being scattered through components.</td></tr>
+            <tr><td><strong>C# + ASP.NET Core</strong></td><td>Implements APIs and business rules</td><td>Strong typing, mature enterprise tooling, and a close fit with the internal company environment.</td></tr>
+            <tr><td><strong>EF Core</strong></td><td>Maps C# models to database data</td><td>Allows services to query and update records through a consistent data model.</td></tr>
+            <tr><td><strong>SQL Server</strong></td><td>Stores durable records</td><td>Fits relational inspection data, constraints, transactions, auditability, and reporting.</td></tr>
+            <tr><td><strong>DbUp SQL scripts</strong></td><td>Controls database structure</td><td>Produces a reviewable, deterministic history in which SQL is the schema source of truth.</td></tr>
+            <tr><td><strong>.NET Aspire</strong></td><td>Starts local backend resources</td><td>Launches the database, migrations, and API in dependency order with one command.</td></tr>
+            <tr><td><strong>OIDC + JWT</strong></td><td>Authenticates users and API requests</td><td>Supports identity systems such as Keycloak, Entra ID, or Auth0 without coupling the whole app to one provider.</td></tr>
+            <tr><td><strong>MSTest + Vitest</strong></td><td>Tests isolated behaviors</td><td>Catches business-rule and component regressions quickly.</td></tr>
+            <tr><td><strong>Playwright + Axe</strong></td><td>Tests browser workflows and accessibility</td><td>Proves that realistic dealer actions work and catches common accessibility failures.</td></tr>
+            <tr><td><strong>Biome</strong></td><td>Checks and formats frontend code</td><td>Provides a single, consistent source of code-quality feedback.</td></tr>
+            <tr><td><strong>GitHub Actions</strong></td><td>Runs checks on proposed changes</td><td>Prevents unbuildable, untested, or insecure changes from silently reaching the main branch.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="origin">
+      <span class="section-number">04 / How it likely evolved</span>
+      <h2>The prompt reads like accumulated experience</h2>
+      <p class="lead">Its language suggests your coworker worked backward from problems encountered while creating a real AI-assisted production application.</p>
+      <ol class="timeline">
+        <li><div><strong>AI behavior drifted between sessions.</strong> Repository-level Copilot instructions were added to preserve decisions after chat context disappeared.</div></li>
+        <li><div><strong>Setup failed on missing tools.</strong> Phase 0A was added to detect dependencies, explain them, request approval, install them, and verify them.</div></li>
+        <li><div><strong>Vague requirements caused invention.</strong> Phase 0B forces an interview about users, entities, relationships, and the first workflow.</div></li>
+        <li><div><strong>Frontend and backend work became disconnected.</strong> The prompt requires one vertical slice that crosses database, API, interface, and tests.</div></li>
+        <li><div><strong>Local database setup was fragile.</strong> Aspire became the one-command path for database, migrations, and API startup.</div></li>
+        <li><div><strong>Database models risked drifting.</strong> SQL scripts were declared the sole schema authority, with EF entities written to match.</div></li>
+        <li><div><strong>UI implementation became inconsistent.</strong> Styling, breakpoints, visible text, and network calls were each constrained to predictable patterns.</div></li>
+        <li><div><strong>Generated files looked finished without working.</strong> Every phase received a build, test, or live behavior gate.</div></li>
+      </ol>
+      <p>The result is best understood as a collection of guardrails based on observed failure modes, not simply a fashionable list of libraries.</p>
+    </section>
+
+    <section id="without">
+      <span class="section-number">05 / Removing the prompt</span>
+      <h2>The stack would still work, but the outcome would be less predictable</h2>
+      <p>A developer can use React, C#, and SQL Server without this prompt. The prompt is not a technical prerequisite. It is a consistency and quality mechanism.</p>
+      <ul class="failure-list">
+        <li>Frontend and backend might be placed in a different repository structure.</li>
+        <li>Minimal APIs might replace the requested controller structure.</li>
+        <li>EF migrations might replace the SQL source of truth.</li>
+        <li>Database entities might be exposed directly through the API.</li>
+        <li>Network calls might be scattered through UI components.</li>
+        <li>Authentication might be postponed until late development.</li>
+        <li>Visible English text might be hard-coded everywhere.</li>
+        <li>Responsive behavior and mobile tests might be skipped.</li>
+        <li>The database might be mocked instead of testing real persistence.</li>
+        <li>Generated code might never be compiled or started.</li>
+        <li>Later AI sessions might introduce conflicting patterns.</li>
+        <li>Missing installations might be left for you to diagnose.</li>
+      </ul>
+      <div class="callout">
+        <h3>Not every alternative is wrong</h3>
+        <p>A monorepo, minimal APIs, or EF migrations can all be valid choices. The risk is not merely choosing a different tool. It is allowing choices to emerge accidentally, conflict with one another, or change from session to session without an explicit reason.</p>
+      </div>
+    </section>
+
+    <section id="minimum">
+      <span class="section-number">06 / Reusable minimum</span>
+      <h2>Reuse the operating method, not necessarily the exact stack</h2>
+      <ol>
+        <li><strong>Describe the domain:</strong> identify users, their problem, core entities, relationships, and important rules.</li>
+        <li><strong>Select one vertical slice:</strong> build one small behavior completely from persistence through the user experience.</li>
+        <li><strong>Define boundaries:</strong> state where business logic, database access, API contracts, UI state, and visible text belong.</li>
+        <li><strong>Create simple startup:</strong> reduce undocumented local configuration and manual dependency ordering.</li>
+        <li><strong>Name each source of truth:</strong> define what governs behavior, database schema, contracts, and product requirements.</li>
+        <li><strong>Add automated gates:</strong> compile, type-check, lint, test, and exercise a real user workflow.</li>
+        <li><strong>Persist agent instructions:</strong> record actual commands, architecture, and conventions in the repository.</li>
+        <li><strong>Use Spec → Plan → Implement:</strong> define behavior before code and verify each implementation phase.</li>
+        <li><strong>Demand completion evidence:</strong> require passing commands and a demonstrated end-to-end result.</li>
+      </ol>
+      <div class="prompt-box">
+        <strong>Compact reusable kickoff prompt</strong>
+        Audit the environment and explain blockers before installing anything. Interview me for the product intent, users, core entities, invariants, and one small end-to-end workflow. Scaffold using the repository's established stack and conventions. Implement that workflow from persistence through API to UI. Keep business entities separate from API contracts, centralize external calls, add focused automated tests, and verify every phase with executable commands. Create concise repository instructions containing the real architecture, commands, and feature-development sequence. Do not invent missing product rules; ask me.
+      </div>
+    </section>
+
+    <section id="fit">
+      <span class="section-number">07 / Project fit</span>
+      <h2>Does this silo you?</h2>
+      <p class="lead">It strongly constrains the implementation, but the underlying method is portable. That distinction is healthy: each project should have deliberate constraints, while different project types should use different constraints.</p>
+      <div class="fit-grid">
+        <article class="fit good">
+          <h3>Strong fit</h3>
+          <ul>
+            <li>Dealer and customer portals</li>
+            <li>Inspection and compliance systems</li>
+            <li>Internal operational tools</li>
+            <li>Inventory and equipment management</li>
+            <li>Administrative workflows</li>
+            <li>Rule-heavy, auditable record systems</li>
+          </ul>
+        </article>
+        <article class="fit poor">
+          <h3>Requires a different scaffold</h3>
+          <ul>
+            <li>Firmware running on a panel</li>
+            <li>Native mobile applications</li>
+            <li>Static informational sites</li>
+            <li>Data notebooks or command-line tools</li>
+            <li>Highly offline field applications</li>
+            <li>Embedded real-time control loops</li>
+          </ul>
+        </article>
+      </div>
+      <p style="margin-top: 28px;">As written, the scaffold commits you to a browser-based, API-driven business system using React, ASP.NET Core, SQL Server, containers, OIDC authentication, and separate repositories. Those are replaceable implementation decisions. The discipline of explicit requirements, boundaries, verification, and documentation is reusable everywhere.</p>
+    </section>
+
+    <section id="examples">
+      <span class="section-number">08 / Your product world</span>
+      <h2>Concrete security-panel applications</h2>
+      <p class="lead">Each example starts with a user-visible outcome and follows it through the systems required to deliver and verify it. Open each example for the product rules that matter.</p>
+      <div class="examples">
+        <details open>
+          <summary><span class="example-number">01</span><span>Dealer backend: remote panel configuration</span></summary>
+          <div class="example-body">
+            <p>A dealer selects customer accounts, reviews panel compatibility, schedules a setting change, and monitors completion.</p>
+            <div class="slice">Configuration job table → entity and rules → API → dealer job list → status detail → panel command → audit history → tests</div>
+            <p><strong>Key invariants:</strong> dealers can access only their hierarchy; unsupported firmware cannot receive the command; previous and new values are recorded; and retries cannot apply a change twice.</p>
+          </div>
+        </details>
+        <details>
+          <summary><span class="example-number">02</span><span>Firmware OTA rollout management</span></summary>
+          <div class="example-body">
+            <p>The web control plane manages firmware releases, eligibility, rollout waves, pauses, and failure analysis.</p>
+            <div class="slice">Firmware release → hardware compatibility → eligibility rules → rollout wave → upgrade attempts → failure reasons</div>
+            <p>The current scaffold fits the control plane, not the firmware binary. Firmware needs its own instructions covering embedded language and toolchain, memory and timing limits, protocol compatibility, bootloader behavior, hardware tests, rollback, and recovery from interrupted upgrades.</p>
+          </div>
+        </details>
+        <details>
+          <summary><span class="example-number">03</span><span>Dealer backend: equipment compatibility</span></summary>
+          <div class="example-body">
+            <p>A dealer selects a panel model and firmware version and sees compatible sensors, communicators, keypads, and feature restrictions.</p>
+            <p><strong>Key rules:</strong> compatibility is version-specific; end-of-life devices remain visible for installed systems; blocked combinations explain why; and scheduled compatibility changes do not become active early.</p>
+          </div>
+        </details>
+        <details>
+          <summary><span class="example-number">04</span><span>Cross-system feature: partition expansion</span></summary>
+          <div class="example-body">
+            <p>The shared functional specification would define maximum partitions by model, upgrade and downgrade behavior, existing sensor assignments, invalid references, command formats, panel acknowledgements, dealer-visible errors, and adoption telemetry.</p>
+            <p>The web scaffold controls dealer configuration. A separate firmware plan controls validation and storage on the panel. The API contract between them must be explicit and versioned.</p>
+          </div>
+        </details>
+        <details>
+          <summary><span class="example-number">05</span><span>Dealer backend: walk test and sensor verification</span></summary>
+          <div class="example-body">
+            <p>A dealer starts a test, watches sensor activity arrive from the panel, records exceptions, and exports results.</p>
+            <p>Account equipment can be prepopulated, panel events can provide evidence, and the dealer can add observations. Required devices cannot silently disappear; reports distinguish tested, failed, skipped, and unreachable equipment.</p>
+          </div>
+        </details>
+        <details>
+          <summary><span class="example-number">06</span><span>Dealer troubleshooting timeline</span></summary>
+          <div class="example-body">
+            <p>A dealer sees a normalized timeline of firmware changes, communication failures, trouble conditions, commands, and dealer actions.</p>
+            <p>The product specification must define ordering, event deduplication, permissions, retention, time zones, and which internal evidence is appropriate to expose externally.</p>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section id="improvements">
+      <span class="section-number">09 / Before reuse</span>
+      <h2>Treat the prompt as a template, not immutable policy</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Decision to revisit</th><th>Why it matters</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Framework versions</strong></td><td>Support lifecycles and current company standards matter more than matching the original application's versions.</td></tr>
+            <tr><td><strong>Two repositories</strong></td><td>Separate releases and ownership can help large teams, while a monorepo may reduce coordination for a small team.</td></tr>
+            <tr><td><strong>Authorization model</strong></td><td>Dealer hierarchy, branches, account access, roles, and internal support access need explicit product requirements.</td></tr>
+            <tr><td><strong>Report architecture</strong></td><td>Inspection products need PDF generation, report templates, signatures, attachments, versioning, and immutable finalization.</td></tr>
+            <tr><td><strong>Equipment import</strong></td><td>Define supported file formats, field mapping, duplicates, validation, correction, partial failures, and import history.</td></tr>
+            <tr><td><strong>Offline operation</strong></td><td>Field inspectors may work where reliable connectivity is unavailable; the original scaffold assumes an online API.</td></tr>
+            <tr><td><strong>Draft versus final records</strong></td><td>A finalized regulatory record should not behave like ordinary editable CRUD data.</td></tr>
+            <tr><td><strong>Production operations</strong></td><td>Metrics, tracing, alerts, backups, restoration tests, data retention, and incident response need explicit design.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="closing">
+      <h2>The durable lesson is bigger than this particular technology stack.</h2>
+      <p>Make important decisions explicit. Give humans and AI fast feedback. Prove one real workflow early. Keep behavior in durable specifications instead of chat history. That method transfers to dealer portals, backend services, firmware, integrations, and data products even when every individual technology changes.</p>
+    </div>
+  </main>
+
+  <footer>
+    <span>Prepared from the inspection-tool stack summary and kickoff scaffold.</span>
+    <span>Standalone document · No server required</span>
+  </footer>
+</body>
+</html>

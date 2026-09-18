@@ -1,0 +1,53 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Tally: Ensure frontend deps",
+      "type": "shell",
+      "command": "powershell",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/scripts/ensure-frontend-deps.ps1"],
+      "presentation": { "reveal": "silent", "panel": "shared", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Tally: Backend (dotnet)",
+      "type": "shell",
+      "command": "dotnet run --launch-profile http",
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "isBackground": true,
+      "presentation": { "reveal": "always", "panel": "dedicated", "group": "tally" },
+      "problemMatcher": {
+        "pattern": { "regexp": "^.*$", "file": 1, "location": 1, "message": 1 },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Building\\.\\.\\.",
+          "endsPattern": "(Now listening on|Application started)"
+        }
+      }
+    },
+    {
+      "label": "Tally: Frontend (vite)",
+      "type": "shell",
+      "command": "pnpm.cmd exec vite",
+      "options": { "cwd": "${workspaceFolder}/frontend" },
+      "isBackground": true,
+      "dependsOn": ["Tally: Ensure frontend deps"],
+      "presentation": { "reveal": "always", "panel": "dedicated", "group": "tally" },
+      "problemMatcher": {
+        "pattern": { "regexp": "^.*$", "file": 1, "location": 1, "message": 1 },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "VITE v",
+          "endsPattern": "ready in"
+        }
+      }
+    },
+    {
+      "label": "Run Tally",
+      "dependsOn": ["Tally: Backend (dotnet)", "Tally: Frontend (vite)"],
+      "dependsOrder": "parallel",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": []
+    }
+  ]
+}

@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A product manager's journey from an AI-first budgeting idea to a working full-stack prototype.">
+  <title>From Product Idea to Working Prototype</title>
+  <style>
+    :root {
+      --ink: #18201d;
+      --muted: #58625d;
+      --paper: #f3f0e8;
+      --surface: #fffefa;
+      --line: #d4d8d0;
+      --green: #155c46;
+      --green-soft: #dcebe3;
+      --coral: #c4523f;
+      --coral-soft: #f4ded8;
+      --blue: #2d6482;
+      --blue-soft: #dceaf1;
+      --gold: #a87517;
+      --gold-soft: #f3e5c5;
+      --max: 1160px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background-color: var(--paper);
+      background-image:
+        linear-gradient(rgba(24, 32, 29, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(24, 32, 29, 0.04) 1px, transparent 1px);
+      background-size: 28px 28px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 17px;
+      line-height: 1.68;
+    }
+
+    a { color: inherit; }
+    a:focus-visible, button:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+    .sans, nav, .eyebrow, .phase-kicker, .artifact-label, .metric-label, .stamp, .button {
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+      letter-spacing: 0;
+    }
+
+    .hero {
+      position: relative;
+      min-height: min(760px, 88vh);
+      overflow: hidden;
+      color: white;
+      background:
+        linear-gradient(100deg, rgba(18, 31, 26, 0.98) 0%, rgba(18, 31, 26, 0.9) 54%, rgba(21, 92, 70, 0.78) 100%),
+        repeating-linear-gradient(135deg, transparent 0 34px, rgba(255, 255, 255, 0.06) 34px 35px);
+      border-bottom: 8px solid var(--coral);
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      right: -9vw;
+      bottom: -22vw;
+      width: 56vw;
+      height: 56vw;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      box-shadow:
+        0 0 0 7vw rgba(255, 255, 255, 0.035),
+        0 0 0 14vw rgba(255, 255, 255, 0.025);
+    }
+
+    .hero-inner, .nav-inner, main, footer {
+      width: min(calc(100% - 36px), var(--max));
+      margin-inline: auto;
+    }
+
+    .hero-inner {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.55fr);
+      gap: 64px;
+      align-items: end;
+      min-height: min(760px, 88vh);
+      padding: 76px 0 58px;
+    }
+
+    .eyebrow {
+      margin: 0 0 16px;
+      color: #f2bf74;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3 { margin-top: 0; line-height: 1.08; letter-spacing: 0; text-wrap: balance; }
+    h1 { max-width: 820px; margin-bottom: 24px; font-size: clamp(3rem, 7vw, 6.7rem); font-weight: 400; }
+    h2 { max-width: 850px; margin-bottom: 22px; font-size: clamp(2.1rem, 4vw, 3.7rem); font-weight: 400; }
+    h3 { margin-bottom: 10px; font-family: "Trebuchet MS", Verdana, sans-serif; font-size: 1.08rem; }
+    p { margin: 0 0 18px; }
+
+    .hero-dek { max-width: 760px; margin: 0; color: #dfe9e3; font-size: clamp(1.08rem, 2vw, 1.32rem); }
+    .hero-note { padding: 24px 0 4px 25px; border-left: 5px solid #f2bf74; }
+    .hero-note strong { display: block; margin-bottom: 8px; color: #f2bf74; font-family: "Trebuchet MS", Verdana, sans-serif; font-size: 0.78rem; text-transform: uppercase; }
+    .hero-note p { margin: 0; color: #e7eee9; font-size: 0.98rem; }
+
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      overflow-x: auto;
+      border-bottom: 1px solid var(--line);
+      background: rgba(243, 240, 232, 0.96);
+      backdrop-filter: blur(12px);
+      scrollbar-width: thin;
+    }
+
+    .nav-inner { display: flex; gap: 6px; padding: 11px 0; }
+    nav a { flex: 0 0 auto; padding: 7px 10px; color: var(--muted); font-size: 0.8rem; font-weight: 700; text-decoration: none; }
+    nav a:hover { color: var(--green); }
+
+    main { background: var(--surface); box-shadow: 0 24px 70px rgba(24, 32, 29, 0.08); }
+    section { padding: 84px 68px; border-bottom: 1px solid var(--line); }
+    .section-intro { max-width: 830px; color: var(--muted); font-size: 1.16rem; }
+    .section-number { margin-right: 9px; color: var(--coral); }
+
+    .abstract-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(270px, 0.75fr);
+      gap: 52px;
+      align-items: start;
+    }
+
+    .principle {
+      padding: 30px;
+      color: white;
+      background: var(--green);
+      border-top: 7px solid #f2bf74;
+    }
+
+    .principle .artifact-label { color: #cfe7dc; }
+    .principle blockquote { margin: 14px 0 0; font-size: 1.36rem; line-height: 1.42; }
+
+    .journey-map {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 42px;
+    }
+
+    .journey-map::before {
+      content: "";
+      position: absolute;
+      top: 27px;
+      right: 8%;
+      left: 8%;
+      height: 2px;
+      background: var(--line);
+    }
+
+    .phase {
+      position: relative;
+      min-height: 250px;
+      padding: 62px 23px 24px;
+      border: 1px solid var(--line);
+      background: white;
+    }
+
+    .phase::before {
+      content: attr(data-step);
+      position: absolute;
+      top: 8px;
+      left: 22px;
+      display: grid;
+      width: 42px;
+      height: 42px;
+      place-items: center;
+      color: white;
+      background: var(--coral);
+      border: 5px solid var(--surface);
+      border-radius: 50%;
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .phase:nth-child(3n + 2)::before { background: var(--blue); }
+    .phase:nth-child(3n + 3)::before { background: var(--green); }
+    .phase-kicker { display: block; margin-bottom: 8px; color: var(--coral); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; }
+    .phase p { margin-bottom: 0; color: var(--muted); font-size: 0.94rem; }
+    .phase-outcome { display: block; margin-top: 17px; padding-top: 13px; border-top: 1px solid var(--line); color: var(--ink); font-family: "Trebuchet MS", Verdana, sans-serif; font-size: 0.78rem; font-weight: 700; }
+
+    .turning-point {
+      display: grid;
+      grid-template-columns: 0.75fr 1.25fr;
+      gap: 46px;
+      align-items: center;
+      color: white;
+      background: var(--ink);
+    }
+
+    .question-stack { display: grid; gap: 10px; }
+    .question {
+      padding: 16px 18px;
+      color: var(--ink);
+      background: var(--gold-soft);
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+      font-weight: 700;
+      transform: rotate(-1deg);
+    }
+    .question:nth-child(2) { background: var(--blue-soft); transform: rotate(0.7deg); }
+    .question:nth-child(3) { background: var(--coral-soft); transform: rotate(-0.4deg); }
+    .turning-point .section-intro { color: #cdd7d1; }
+
+    .artifact-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1px;
+      margin-top: 38px;
+      border: 1px solid var(--line);
+      background: var(--line);
+    }
+
+    .artifact { min-height: 260px; padding: 30px; background: white; }
+    .artifact:nth-child(1) { border-top: 6px solid var(--blue); }
+    .artifact:nth-child(2) { border-top: 6px solid var(--coral); }
+    .artifact:nth-child(3) { border-top: 6px solid var(--gold); }
+    .artifact:nth-child(4) { border-top: 6px solid var(--green); }
+    .artifact-label { display: block; margin-bottom: 15px; color: var(--muted); font-size: 0.73rem; font-weight: 700; text-transform: uppercase; }
+    .artifact p { color: var(--muted); }
+    .artifact a { color: var(--green); font-family: "Trebuchet MS", Verdana, sans-serif; font-size: 0.82rem; font-weight: 700; }
+
+    .stack-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 28px;
+    }
+    .stack-item { padding: 17px; border: 1px solid var(--line); background: #f7f7f2; }
+    .stack-item strong { display: block; font-family: "Trebuchet MS", Verdana, sans-serif; font-size: 0.9rem; }
+    .stack-item span { color: var(--muted); font-size: 0.8rem; }
+
+    .learning-list { margin: 40px 0 0; padding: 0; list-style: none; counter-reset: learning; }
+    .learning-list li {
+      display: grid;
+      grid-template-columns: 74px minmax(0, 1fr);
+      gap: 25px;
+      margin: 0;
+      padding: 30px 0;
+      border-top: 1px solid var(--line);
+      counter-increment: learning;
+    }
+    .learning-list li::before {
+      content: "0" counter(learning);
+      color: var(--coral);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 2.4rem;
+      line-height: 1;
+    }
+    .learning-list h3 { font-size: 1.2rem; }
+    .learning-list p { max-width: 830px; margin-bottom: 0; color: var(--muted); }
+
+    .proof-band {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1px;
+      margin-top: 38px;
+      border: 1px solid var(--line);
+      background: var(--line);
+    }
+    .metric { padding: 25px 20px; background: white; }
+    .metric strong { display: block; margin-bottom: 5px; color: var(--green); font-size: 1.7rem; font-weight: 400; line-height: 1.1; }
+    .metric-label { color: var(--muted); font-size: 0.74rem; font-weight: 700; text-transform: uppercase; }
+
+    #iterating .question-stack { margin-top: 40px; }
+    #iterating .question-stack .question { transform: none; }
+    #iterating .log-note { margin-top: 40px; color: var(--muted); font-family: "Trebuchet MS", Verdana, sans-serif; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; }
+
+    .reflection { background: var(--gold-soft); }
+    .reflection blockquote { max-width: 900px; margin: 30px 0 0; font-size: clamp(1.45rem, 3vw, 2.35rem); line-height: 1.35; }
+
+    .next-step {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(250px, 0.7fr);
+      gap: 46px;
+      align-items: center;
+      color: white;
+      background: var(--green);
+    }
+    .next-step p { max-width: 760px; color: #dcece4; }
+    .button {
+      display: inline-block;
+      padding: 13px 17px;
+      color: var(--ink);
+      background: #f2bf74;
+      border: 1px solid #f2bf74;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .stamp { padding: 23px; border: 1px solid rgba(255, 255, 255, 0.35); font-size: 0.86rem; }
+    .stamp strong { display: block; margin-bottom: 7px; color: #f2bf74; text-transform: uppercase; }
+
+    footer { display: flex; justify-content: space-between; gap: 24px; padding: 28px 0 44px; color: var(--muted); font-family: "Trebuchet MS", Verdana, sans-serif; font-size: 0.78rem; }
+
+    @media (max-width: 880px) {
+      .hero-inner, .abstract-grid, .turning-point, .next-step { grid-template-columns: 1fr; }
+      .hero-inner { align-content: end; gap: 35px; }
+      .journey-map { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .journey-map::before { display: none; }
+      .proof-band, .stack-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 620px) {
+      body { font-size: 16px; }
+      .hero { min-height: 720px; }
+      .hero-inner { min-height: 720px; padding: 52px 0 42px; }
+      h1 { font-size: 3rem; }
+      section { padding: 58px 22px; }
+      .journey-map, .artifact-grid, .proof-band, .stack-strip { grid-template-columns: 1fr; }
+      .phase { min-height: 0; }
+      .learning-list li { grid-template-columns: 48px minmax(0, 1fr); gap: 14px; }
+      .learning-list li::before { font-size: 1.6rem; }
+      footer { flex-direction: column; }
+    }
+
+    @media print {
+      body { background: white; font-size: 11pt; }
+      nav { display: none; }
+      .hero, .hero-inner { min-height: 0; }
+      .hero-inner { padding: 50px 0; }
+      main { width: 100%; box-shadow: none; }
+      section { padding: 34px 0; break-inside: avoid; }
+      .journey-map, .artifact-grid { break-inside: auto; }
+      .phase, .artifact { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div>
+        <p class="eyebrow">A product manager's AI-assisted build journey</p>
+        <h1>From product idea to working prototype</h1>
+        <p class="hero-dek">How curiosity about higher-order prompt scaffolding became an approved product plan, a professional web stack, and a working end-to-end prototype of an AI-era budgeting application.</p>
+      </div>
+      <aside class="hero-note">
+        <strong>Journey status</strong>
+        <p>Product direction approved and the complete interactive product prototype validated on September 11, 2026.</p>
+      </aside>
+    </div>
+  </header>
+
+  <nav aria-label="Journey sections">
+    <div class="nav-inner">
+      <a href="#abstract">Abstract</a>
+      <a href="#journey">Journey map</a>
+      <a href="#shift">The shift</a>
+      <a href="#artifacts">Artifacts</a>
+      <a href="#learning">What I learned</a>
+      <a href="#proof">What exists now</a>
+      <a href="#next">Next chapter</a>
+      <a href="#iterating">Prototyping and iterating</a>
+    </div>
+  </nav>
+
+  <main>
+    <section id="abstract">
+      <div class="abstract-grid">
+        <div>
+          <p class="eyebrow"><span class="section-number">01</span> Summary / abstract</p>
+          <h2>A budgeting app built for the AI world we now live in</h2>
+          <p class="section-intro">The goal was to rethink budgeting around something people increasingly understand: communicating with an AI agent. Instead of making users navigate a rigid ledger, the product uses familiar, conversational interactions to help categorize spending, maintain envelopes, and make routine decisions on the user's behalf.</p>
+          <p>The ambition was not to automate the user out of budgeting. It was to automate the repetitive work <em>without separating the user from each individual purchase</em>. Every transaction still creates a brief moment of recognition: what was bought, how much it cost, and where it belongs.</p>
+          <p>That interaction matters because awareness is not only about the total amount spent. It is also about the sheer number of purchases being made. A short confirmation for each charge keeps the user grounded in both dimensions while AI handles merchant cleanup, recommendations, and the mechanics of updating the budget.</p>
+        </div>
+        <aside class="principle">
+          <span class="artifact-label">Defining product principle</span>
+          <blockquote>Automate the work of budgeting, not the awareness that makes budgeting valuable.</blockquote>
+        </aside>
+      </div>
+    </section>
+
+    <section id="journey">
+      <p class="eyebrow"><span class="section-number">02</span> Journey map</p>
+      <h2>Six phases from curiosity to evidence</h2>
+      <p class="section-intro">The work did not begin with code. Each phase produced an artifact or decision that made the next phase more grounded, reducing the chance of building a polished version of an unclear idea.</p>
+
+      <div class="journey-map" aria-label="Six-phase project journey">
+        <article class="phase" data-step="01">
+          <span class="phase-kicker">Orientation</span>
+          <h3>Understand the stack</h3>
+          <p>Started as a product manager new to technical stacks, unpacking how a frontend, API, database, tooling, and local environment work together.</p>
+          <span class="phase-outcome">Outcome: a usable mental model</span>
+        </article>
+        <article class="phase" data-step="02">
+          <span class="phase-kicker">Prompt design</span>
+          <h3>Build the interview</h3>
+          <p>Moved from one-shot prompting to a structured, multi-round discovery process that required the AI to ask clarifying questions before proposing a solution.</p>
+          <span class="phase-outcome">Outcome: prompt architecture</span>
+        </article>
+        <article class="phase" data-step="03">
+          <span class="phase-kicker">Product discovery</span>
+          <h3>Pressure-test the idea</h3>
+          <p>Iterated through bank connectivity, app-originated SMS, envelopes, rollover, refunds, security, merchant cleanup, and AI-assisted review.</p>
+          <span class="phase-outcome">Outcome: explicit decisions</span>
+        </article>
+        <article class="phase" data-step="04">
+          <span class="phase-kicker">Definition</span>
+          <h3>Approve the direction</h3>
+          <p>Consolidated the product into a source-of-truth plan with workflows, constraints, MVP boundaries, operating posture, and acceptance criteria.</p>
+          <span class="phase-outcome">Outcome: approved product plan</span>
+        </article>
+        <article class="phase" data-step="05">
+          <span class="phase-kicker">Foundation</span>
+          <h3>Prepare the machine</h3>
+          <p>Audited and installed the development stack, established the frontend and backend projects, configured package sources, and connected the layers.</p>
+          <span class="phase-outcome">Outcome: working environment</span>
+        </article>
+        <article class="phase" data-step="06">
+          <span class="phase-kicker">Prototype</span>
+          <h3>Prove the concept</h3>
+          <p>Started with guided onboarding, then expanded the system into the monthly budget, transactions, AI review, month close, refunds, settings, SMS simulation, and audit workflows.</p>
+          <span class="phase-outcome">Outcome: validated prototype</span>
+        </article>
+      </div>
+    </section>
+
+    <section id="shift" class="turning-point">
+      <div class="question-stack" aria-label="Questions that improved the product definition">
+        <div class="question">What if the app sent the notification?</div>
+        <div class="question">How involved should the user remain?</div>
+        <div class="question">What must persist behind the screen?</div>
+      </div>
+      <div>
+        <p class="eyebrow"><span class="section-number">03</span> The important shift</p>
+        <h2>From asking AI for answers to asking AI for better questions</h2>
+        <p class="section-intro">The quality of the product improved when the AI stopped behaving like a rapid solution generator and began behaving like a discovery partner. A two-to-three-round interview created space to challenge assumptions, expose dependencies, and turn instinctive “what if” ideas into product decisions.</p>
+        <p>The prompt became part of the product process. It established roles, phases, decision gates, technical constraints, verification expectations, and clear instructions to pause for clarification. That scaffolding made the AI's broader knowledge available without surrendering product judgment.</p>
+      </div>
+    </section>
+
+    <section id="artifacts">
+      <p class="eyebrow"><span class="section-number">04</span> Artifact inventory</p>
+      <h2>The work became tangible in four forms</h2>
+      <p class="section-intro">Each artifact answered a different question: how to work, what to build, what it runs on, and whether the experience actually works.</p>
+
+      <div class="artifact-grid">
+        <article class="artifact">
+          <span class="artifact-label">01 / Prompt architecture</span>
+          <h3>The operating instructions</h3>
+          <p>A phased kickoff scaffold taught the agent how to audit the environment, interview the product owner, wait at decision gates, create a vertical slice, and verify its own work.</p>
+          <a href="Kickoff_Prompt_New_Project_Scaffold.md">View the kickoff scaffold</a>
+        </article>
+        <article class="artifact">
+          <span class="artifact-label">02 / Product plan</span>
+          <h3>The approved direction</h3>
+          <p>A comprehensive definition captured the product intent, transaction workflow, onboarding, envelope behavior, AI review, refunds, SMS, account controls, MVP, and acceptance criteria.</p>
+          <a href="connected_budget_product_definition.html">View the product definition</a>
+        </article>
+        <article class="artifact">
+          <span class="artifact-label">03 / Tech stack</span>
+          <h3>The delivery foundation</h3>
+          <p>A professional local environment joined a React and TypeScript interface to an ASP.NET Core API and SQLite database, with build, formatting, package, and browser-testing tools around it.</p>
+          <div class="stack-strip" aria-label="Technology stack">
+            <div class="stack-item"><strong>React</strong><span>Interface</span></div>
+            <div class="stack-item"><strong>.NET</strong><span>API</span></div>
+            <div class="stack-item"><strong>EF Core</strong><span>Data access</span></div>
+            <div class="stack-item"><strong>SQLite</strong><span>Persistence</span></div>
+          </div>
+        </article>
+        <article class="artifact">
+          <span class="artifact-label">04 / Prototype</span>
+          <h3>The connected product experience</h3>
+          <p>A persistent application now connects monthly envelopes, transaction review, AI-assisted categorization, explicit month close and rollover, refunds, account settings, audit history, and simulated SMS.</p>
+          <a href="connected-envelope-budget/frontend/">Open the prototype source</a>
+        </article>
+      </div>
+    </section>
+
+    <section id="learning">
+      <p class="eyebrow"><span class="section-number">05</span> What I learned</p>
+      <h2>The lessons extended beyond one budgeting app</h2>
+      <p class="section-intro">This project changed how I think about prototypes, prompting, and the relationship between product vision and technical foundations.</p>
+
+      <ol class="learning-list">
+        <li>
+          <div>
+            <h3>A professional prototype is an ecosystem, not a single application</h3>
+            <p>I learned that numerous applications and tools are necessary to create more professionally constructed prototypes for web-based products. The interface is only one layer. Runtimes, package managers, an API, a database, source control, formatting, compilation, and browser validation all contribute to whether a prototype is credible and repeatable.</p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <h3>Product vision improves when AI is required to clarify</h3>
+            <p>I learned the importance of iterating on a product vision with AI and explicitly requiring it to ask clarifying questions rather than jump straight to a conclusion. A simplistic prototype can move only as fast as my own “what if it did this?” creativity. A structured dialogue uses AI's much broader ability to ask “what if?” and “how do you envision this working?” while leaving the final decisions with me.</p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <h3>Backend thinking turns a story into a system</h3>
+            <p>I learned the importance of thinking through how information will be stored, related, changed, and retrieved. Frontend work is powerful for storytelling, but a well-considered backend and database allow the prototype to retain state, support richer behavior, integrate with larger systems, and evolve into something that can be demonstrated repeatedly and scaled responsibly.</p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <h3>Verification is part of prototyping</h3>
+            <p>I learned that “it looks right” is not the same as “it works.” Building the complete path from screen to API to database, then testing save, reload, CORS, and responsive layouts, created evidence that the concept was more than a visual mockup.</p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <h3>Moving a project folder is not a neutral operation</h3>
+            <p>I relocated the whole prototype to its own folder to keep it separate from a much larger, unrelated backend repository. That single move broke the frontend: pnpm had installed dependencies as Windows junctions with absolute paths baked in, and once the original folder was gone, every import silently pointed at nothing. Nothing in the application code was wrong; the environment underneath it was. The fix was a clean reinstall of dependencies from the new location, and the lesson was broader than pnpm — a working prototype depends on an environment, not just a codebase, and that environment does not always travel with a simple copy or move.</p>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <section id="proof">
+      <p class="eyebrow"><span class="section-number">06</span> What exists now</p>
+      <h2>The product workflow, proven across the stack</h2>
+      <p class="section-intro">The prototype now covers the complete budgeting loop with persistent data and simulated provider boundaries. A user can review incoming purchases, resolve categories with AI assistance, inspect envelope impact, close a month, and see balances roll forward.</p>
+      <div class="proof-band">
+        <div class="metric"><strong>9 envelopes</strong><span class="metric-label">Monthly balances</span></div>
+        <div class="metric"><strong>4 reviews</strong><span class="metric-label">Seeded uncategorized charges</span></div>
+        <div class="metric"><strong>2 panes</strong><span class="metric-label">AI review workspace</span></div>
+        <div class="metric"><strong>0 overflow</strong><span class="metric-label">375px mobile validation</span></div>
+      </div>
+    </section>
+
+    <section class="reflection">
+      <p class="eyebrow">A changed perspective</p>
+      <blockquote>Before this journey, a prototype primarily meant a screen that could tell the story. Now it means a structured conversation, an explicit product model, a working system behind the interface, and evidence that the idea behaves as intended.</blockquote>
+    </section>
+
+    <section id="next" class="next-step">
+      <div>
+        <p class="eyebrow"><span class="section-number">07</span> The next chapter</p>
+        <h2>Transition from simulation to evidence</h2>
+        <p>The next step is to put the complete workflow in front of users, observe how they interpret envelope impact and AI suggestions, and use that evidence to prioritize production integrations for connected accounts, messaging, authentication, and Claude.</p>
+        <a class="button" href="connected_budget_product_definition.html">Read the approved product plan</a>
+      </div>
+      <aside class="stamp">
+        <strong>Current milestone</strong>
+        Product direction approved<br>
+        Complete prototype built<br>
+        Core workflows verified<br>
+        Ready for feedback
+      </aside>
+    </section>
+
+    <section id="iterating">
+      <p class="eyebrow"><span class="section-number">08</span> Prototyping and iterating</p>
+      <h2>The interview habit didn't stop once the prototype was running</h2>
+      <p class="section-intro">Real use against the live app turned up a bug and, separately, a feature idea. Both moved through the same discipline established during product discovery: describe the problem in plain language, let the AI ask clarifying questions before touching any code, then verify the result in the running app rather than trusting the description of it.</p>
+
+      <div class="journey-map" aria-label="Propose, clarify, implement cycle">
+        <article class="phase" data-step="1">
+          <span class="phase-kicker">Propose / report</span>
+          <h3>"The login button is stuck"</h3>
+          <p>Reported that neither a teammate's account nor any other login could get past a permanently "logging in…" button, then separately asked for a friendlier, more capable allocation step inside onboarding.</p>
+          <span class="phase-outcome">Outcome: two concrete asks</span>
+        </article>
+        <article class="phase" data-step="2">
+          <span class="phase-kicker">Clarify</span>
+          <h3>Questions before code</h3>
+          <p>Before redesigning the allocation step, seven clarifying questions were asked and answered: where the sticky elements should live, whether the slider should ever overwrite typed dollar amounts, which gauge style to reuse, what the mobile fallback should be, and how over-budget warnings should behave.</p>
+          <span class="phase-outcome">Outcome: a shared, specific spec</span>
+        </article>
+        <article class="phase" data-step="3">
+          <span class="phase-kicker">Implement &amp; verify</span>
+          <h3>Fixed, built, and proven live</h3>
+          <p>The login bug traced to one state value defaulting to "loading" before any attempt was made. The allocation step became a draggable three-way slider, three live per-group gauges, a sticky total-allocated tracker, and split Needs / Wants / Savings tables — confirmed in the running app at desktop and mobile widths.</p>
+          <span class="phase-outcome">Outcome: shipped and confirmed in-browser</span>
+        </article>
+      </div>
+
+      <div class="question-stack" aria-label="Clarifying questions asked before building the allocation redesign">
+        <div class="question">Should dragging the slider auto-redistribute dollar amounts already typed into the envelopes, or only move a guideline target?</div>
+        <div class="question">Should the sticky summary bar pin to the wizard panel, or to the browser window itself?</div>
+        <div class="question">What should the floating total-allocated tracker do on a narrow phone screen?</div>
+      </div>
+
+      <div class="proof-band">
+        <div class="metric"><strong>1 line</strong><span class="metric-label">Root cause of the login bug</span></div>
+        <div class="metric"><strong>7 questions</strong><span class="metric-label">Asked before the redesign began</span></div>
+        <div class="metric"><strong>2 breakpoints</strong><span class="metric-label">Desktop and mobile verified live</span></div>
+        <div class="metric"><strong>0 amounts</strong><span class="metric-label">Typed dollars overwritten by the slider</span></div>
+      </div>
+      <p class="log-note">Logged September 14, 2026</p>
+    </section>
+  </main>
+
+  <footer>
+    <span>Connected Envelope Budget journey</span>
+    <span>Documented September 11, 2026</span>
+  </footer>
+</body>
+</html>

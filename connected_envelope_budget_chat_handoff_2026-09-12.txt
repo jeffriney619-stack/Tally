@@ -1,0 +1,47 @@
+CONNECTED ENVELOPE BUDGET - CHAT HANDOFF
+Export date: 2026-09-12
+Original Copilot session ID: 22663e2d-dc18-4a39-a6a9-87514b36eaab
+
+PURPOSE
+This file is the entry point for a new chat investigating problems with work produced during the original session. The exact event transcript is stored beside this file as:
+
+connected_envelope_budget_chat_transcript_2026-09-12.jsonl
+
+HOW THE NEXT CHAT SHOULD USE THIS EXPORT
+1. Read this handoff file first.
+2. Treat the JSONL file as the authoritative historical record. It includes user messages, assistant messages, tool calls, tool results, and timestamps.
+3. Do not load the entire transcript into context unless necessary. Search it for the affected feature, filename, error, decision, or user wording, then read focused ranges around those matches.
+4. Inspect the current workspace files and reproduce the reported problem. Do not assume that prior claims of completion or validation are correct merely because they appear in the transcript.
+5. Distinguish product decisions made by the user from implementation choices made by the assistant.
+6. Preserve current user changes and avoid reverting unrelated work.
+
+RECOMMENDED OPENING PROMPT FOR THE NEW CHAT
+Read connected_envelope_budget_chat_handoff_2026-09-12.txt first. Then use connected_envelope_budget_chat_transcript_2026-09-12.jsonl as the authoritative record of the prior session. I am seeing the following problem: [DESCRIBE THE PROBLEM]. Find the relevant requirements and implementation history in the transcript, inspect the current code, reproduce the issue, and propose or implement the smallest root-cause fix. Do not rely only on the previous assistant's completion summary.
+
+PROJECT LOCATION
+connected-envelope-budget/
+
+PRIMARY PRODUCT ARTIFACTS
+- connected_budget_product_definition.html: approved product definition and acceptance criteria.
+- connected_envelope_budget_journey.html: retrospective narrative; useful background, not the authoritative implementation contract.
+- connected-envelope-budget/frontend/: React and TypeScript prototype.
+- connected-envelope-budget/backend/: ASP.NET Core and SQLite API.
+
+KNOWN IMPLEMENTATION BOUNDARIES AT EXPORT TIME
+- Bank aggregation, Claude, SMS delivery, recovery email, and production authentication are simulated.
+- CSV export and account deletion were visible but not fully wired.
+- Prototype-wide state was persisted as a singleton JSON document in SQLite.
+- The earlier onboarding API remained in the project.
+- Full Biome lint had CSS specificity warnings and a deprecated configuration notice, while focused TypeScript checks and production builds had passed.
+
+IMPORTANT REVIEW POSTURE
+The user reported problems after the implementation. The next chat should begin with the user's concrete symptom, reproduce it, and compare actual behavior against the product definition and the user's exact statements in the raw transcript. Previous browser checks may demonstrate only the tested paths, not overall correctness.
+
+PRIVACY AND PORTABILITY
+The raw transcript contains local Windows paths, tool inputs, and tool outputs. It should be reviewed before sharing outside the current machine or organization. This export is intended primarily for another Copilot chat in this workspace.
+
+TRANSCRIPT FORMAT
+Each line of the JSONL file is one JSON object. Common event types include session.start, user.message, assistant.message, tool.execution_start, tool.execution_complete, assistant.turn_start, and assistant.turn_end. Search by event type, filename, feature name, or exact phrases from the conversation.
+
+EXPORT LIMIT
+A transcript cannot include events that occur after the copy is made, including any later messages in this export turn. This handoff file records the purpose and procedure for those final export actions.
