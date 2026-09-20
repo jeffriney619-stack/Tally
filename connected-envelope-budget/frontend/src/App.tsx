@@ -12,7 +12,6 @@ import {
   ChevronRight,
   CircleDollarSign,
   CreditCard,
-  Database,
   Download,
   Film,
   Gamepad2,
@@ -54,10 +53,11 @@ import './App.css'
 import exampleTransactionsRaw from './data/example_transactions.json'
 import moneyPlantLogo from './assets/money-plant.png'
 import { MoneyPlantMascot } from './MoneyPlantMascot'
-import { LiveEnvelopesView } from './LiveEnvelopesView'
 import {
+  clearAuthToken,
   type CleanSlateResetType,
   generateEnvelopeAssistantRecommendation,
+  getAuthToken,
   getPrototypeState,
   getSmsConsent,
   login,
@@ -98,9 +98,8 @@ type View =
   | 'sms'
   | 'activity'
   | 'categoryDetail'
-  | 'liveData'
   | 'monthInReview'
-type SettingsTab = 'profile' | 'accounts'
+type SettingsTab = 'profile' | 'accounts' | 'budget'
 type AuthMode = 'signup' | 'login' | 'recovery'
 
 // Cast example transactions from JSON
@@ -114,7 +113,6 @@ const navItems: Array<{ view: View; label: string; icon: typeof LayoutDashboard 
   { view: 'assistant', label: 'Transaction review', icon: Bot },
   { view: 'sms', label: 'SMS simulator', icon: MessageSquareText },
   { view: 'activity', label: 'Audit history', icon: History },
-  { view: 'liveData', label: 'Live data (beta)', icon: Database },
   { view: 'settings', label: 'Settings', icon: Settings },
 ]
 
@@ -288,7 +286,19 @@ function createBlankAccount(username: string): PrototypeState {
   }
 }
 
+function normalizeArchivedCategories(state: PrototypeState): PrototypeState {
+  if (!state.categories.some((category) => category.archived)) {
+    return state
+  }
+
+  return {
+    ...state,
+    categories: state.categories.map((category) => ({ ...category, archived: false })),
+  }
+}
+
 function App() {
+  const AUTH_USERNAME_KEY = 'auth_username'
   const [state, setState] = useState<PrototypeState | null>(null)
   const [authenticated, setAuthenticated] = useState(false)
   const [authMode, setAuthMode] = useState<AuthMode>('signup')
@@ -316,6 +326,56 @@ function App() {
   const [flashMessage, setFlashMessage] = useState<string | null>(null)
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null)
 
+  function lockSession() {
+    setAuthenticated(false)
+    setState(null)
+    setView('dashboard')
+    setMobileNav(false)
+    setSelectedId(null)
+    setSelectedCategoryId(null)
+    setCategoryFilter(null)
+  }
+
+  useEffect(() => {
+    if (authenticated || state) return
+    const token = getAuthToken()
+    const savedUsername = localStorage.getItem(AUTH_USERNAME_KEY)
+    if (!token || !savedUsername) return
+
+    setSaveStatus('loading')
+    setUsername(savedUsername)
+
+    getPrototypeState(savedUsername)
+      .then(async (saved) => {
+        const initialRaw = saved
+          ? {
+              ...saved,
+              introductionCompletedAt: saved.introductionCompletedAt,
+              vendorRules: saved.vendorRules ?? [],
+              monthInReviews: saved.monthInReviews ?? [],
+              obligationPayments: saved.obligationPayments ?? [],
+              assistantSession: saved.assistantSession,
+              debugCurrentDate: saved.debugCurrentDate,
+            }
+          : createBlankAccount(savedUsername)
+        const initial = normalizeArchivedCategories(initialRaw)
+
+        if (!saved) {
+          await savePrototypeState(savedUsername, initial)
+        }
+
+        setState(initial)
+        setAuthenticated(true)
+        setSaveStatus('saved')
+      })
+      .catch(() => {
+        clearAuthToken()
+        localStorage.removeItem(AUTH_USERNAME_KEY)
+        setUsername('')
+        setSaveStatus('saved')
+      })
+  }, [authenticated, state])
+
   async function handleAuthSubmit(username: string, password: string, mode: AuthMode) {
     setSaveStatus('loading')
     setAuthMessage('')
@@ -332,11 +392,12 @@ function App() {
 
       // Store the auth token
       setAuthToken(authResponse.token)
+      localStorage.setItem(AUTH_USERNAME_KEY, authResponse.username)
       setUsername(authResponse.username)
 
       // Load or create the user's budget profile
       const saved = await getPrototypeState(authResponse.username)
-      const initial = saved
+      const initialRaw = saved
         ? {
             ...saved,
             introductionCompletedAt: saved.introductionCompletedAt,
@@ -347,6 +408,7 @@ function App() {
             debugCurrentDate: saved.debugCurrentDate,
           }
         : createBlankAccount(authResponse.username)
+      const initial = normalizeArchivedCategories(initialRaw)
       if (!saved) await savePrototypeState(authResponse.username, initial)
 
       setState(initial)
@@ -440,7 +502,8 @@ function App() {
   }
 
   async function commit(next: PrototypeState, entry?: AuditEntry) {
-    const withAudit = entry ? { ...next, audit: [entry, ...next.audit] } : next
+    const normalized = normalizeArchivedCategories(next)
+    const withAudit = entry ? { ...normalized, audit: [entry, ...normalized.audit] } : normalized
     setState(withAudit)
     setSaveStatus('loading')
     try {
@@ -456,7 +519,8 @@ function App() {
   // Review workflow can hold its place and show a recoverable error on failure
   // instead of silently advancing.
   async function commitReviewChange(next: PrototypeState, entry?: AuditEntry): Promise<boolean> {
-    const withAudit = entry ? { ...next, audit: [entry, ...next.audit] } : next
+    const normalized = normalizeArchivedCategories(next)
+    const withAudit = entry ? { ...normalized, audit: [entry, ...normalized.audit] } : normalized
     setState(withAudit)
     setSaveStatus('loading')
     try {
@@ -507,6 +571,7 @@ function App() {
     )
   }
 
+  const hasBuiltBudget = state.onboardingComplete && state.categories.length > 0
   const liveCurrentMonth = state.currentMonth
   const actualTimelineMonths = Array.from(
     new Set([
@@ -536,6 +601,10 @@ function App() {
   function navigate(nextView: View) {
     if (isForecastMonth && nextView !== 'dashboard') {
       setFlashMessage('Forecast months are view-only on Overview. Return to the current month to edit.')
+      return
+    }
+    if (!hasBuiltBudget && nextView !== 'dashboard' && nextView !== 'settings') {
+      setFlashMessage('Create your first budget from Overview to unlock the rest of the workspace.')
       return
     }
     setView(nextView)
@@ -726,10 +795,11 @@ function App() {
           {navItems.map((item) => {
             const Icon = item.icon
             const count = item.view === 'inbox' ? uncategorized.length : 0
+            const lockedByBudget = !hasBuiltBudget && item.view !== 'dashboard' && item.view !== 'settings'
             return (
               <button
                 className={view === item.view ? 'active' : ''}
-                disabled={isForecastMonth && item.view !== 'dashboard'}
+                disabled={(isForecastMonth && item.view !== 'dashboard') || lockedByBudget}
                 key={item.view}
                 onClick={() => navigate(item.view)}
                 type="button"
@@ -821,21 +891,13 @@ function App() {
           <div className="topbar-actions">
             <button
               className="icon-button"
-              disabled={isForecastMonth}
+              disabled={isForecastMonth || !hasBuiltBudget}
               onClick={() => navigate('inbox')}
               title="Uncategorized inbox"
               type="button"
             >
               <Inbox size={19} />
               {uncategorized.length > 0 && <b>{uncategorized.length}</b>}
-            </button>
-            <button
-              className="avatar-button"
-              onClick={() => setAuthenticated(false)}
-              title="Lock session"
-              type="button"
-            >
-              JR
             </button>
           </div>
         </header>
@@ -875,7 +937,16 @@ function App() {
               onShowReviewBlocked={() => setShowReviewBlockedPopup(true)}
             />
           )}
-          {view === 'categories' && <CategoriesView state={stateForMonth} onCommit={commit} />}
+          {view === 'categories' && (
+            <CategoriesView
+              state={stateForMonth}
+              onCommit={commit}
+              onOpenSettings={() => {
+                setSettingsTab('profile')
+                navigate('settings')
+              }}
+            />
+          )}
           {view === 'categoryDetail' && selectedCategoryId && (
             <CategoryDetailView
               categoryId={selectedCategoryId}
@@ -947,7 +1018,7 @@ function App() {
               tab={settingsTab}
               onTab={setSettingsTab}
               onCommit={commit}
-              onLogout={() => setAuthenticated(false)}
+              onLogout={lockSession}
               username={username}
               onReplaceState={(next) => {
                 setState(next)
@@ -966,7 +1037,6 @@ function App() {
             />
           )}
           {view === 'activity' && <ActivityView state={state} />}
-          {view === 'liveData' && <LiveEnvelopesView username={username} />}
         </main>
       </div>
 
@@ -1756,7 +1826,7 @@ function Dashboard({
           <small>
             {isForecastMonth
               ? 'Current contribution totals across your active envelopes'
-              : 'Editable from the Categories tab'}
+              : 'Editable from Settings'}
           </small>
           {!isForecastMonth && adHocIncome > 0 && (
             <div className="ad-hoc-chip">+ {money(adHocIncome)} ad hoc income</div>
@@ -3295,7 +3365,7 @@ function OnboardingIntroduction({
               <p className="eyebrow">AI Envelope Assistant</p>
               <h1>Build a budget around your life.</h1>
               <p>
-                Answer seven quick questions, and Tally will recommend a personalized set of
+                Answer ten quick questions, and Tally will recommend a personalized set of
                 envelopes based on how you spend, save, and organize your money.
               </p>
               <div className="intro-visual envelope-assistant-visual">
@@ -3836,8 +3906,7 @@ function OnboardingWizard({
       const text = assistantFollowUps[question.key].trim()
       const selectedShortcut = assistantSelections.specialAttention.some(
         (item) =>
-          item === 'Nothing needs special attention at this time' ||
-          item === "I'm not sure yet",
+          item === 'Nothing needs special attention at this time',
       )
       return selectedShortcut || text.length > 0
     }
@@ -4353,7 +4422,7 @@ function OnboardingWizard({
                           value={assistantFollowUps.specialAttention}
                         />
                       </label>
-                      <label className="inline-add">
+                      <label className="assistant-checkbox-row">
                         <input
                           checked={assistantSelections.specialAttention.includes(
                             'Nothing needs special attention at this time',
@@ -4372,24 +4441,6 @@ function OnboardingWizard({
                           type="checkbox"
                         />
                         Nothing needs special attention at this time
-                      </label>
-                      <label className="inline-add">
-                        <input
-                          checked={assistantSelections.specialAttention.includes("I'm not sure yet")}
-                          onChange={(event) => {
-                            if (event.target.checked) {
-                              setAssistantSelections((prev) => ({
-                                ...prev,
-                                specialAttention: ["I'm not sure yet"],
-                              }))
-                              setAssistantFollowUps((prev) => ({ ...prev, specialAttention: '' }))
-                            } else {
-                              setAssistantSelections((prev) => ({ ...prev, specialAttention: [] }))
-                            }
-                          }}
-                          type="checkbox"
-                        />
-                        I'm not sure yet
                       </label>
                     </div>
                   )}
@@ -4901,9 +4952,11 @@ function OnboardingWizard({
 function CategoriesView({
   state,
   onCommit,
+  onOpenSettings,
 }: {
   state: PrototypeState
   onCommit: (state: PrototypeState, entry?: AuditEntry) => void
+  onOpenSettings: () => void
 }) {
   const [newCategory, setNewCategory] = useState('')
   const [showMoneyModal, setShowMoneyModal] = useState(false)
@@ -4914,7 +4967,7 @@ function CategoriesView({
   } | null>(null)
   const focusValues = useRef<Record<string, number>>({})
 
-  const activeCategories = state.categories.filter((item) => !item.archived)
+  const activeCategories = state.categories
   const totalBudgeted = activeCategories.reduce((sum, item) => sum + item.monthlyTarget, 0)
   const remaining = state.monthlyIncome - totalBudgeted
   const isOverBudget = remaining < 0
@@ -4948,9 +5001,7 @@ function CategoriesView({
     const previousValue = focusValues.current[category.id]
     delete focusValues.current[category.id]
     if (previousValue === undefined) return
-    const newTotal = state.categories
-      .filter((item) => !item.archived)
-      .reduce((sum, item) => sum + item.monthlyTarget, 0)
+    const newTotal = state.categories.reduce((sum, item) => sum + item.monthlyTarget, 0)
     const totalBeforeThisEdit = newTotal - category.monthlyTarget + previousValue
     const wasAlreadyOver = state.monthlyIncome - totalBeforeThisEdit < 0
     if (newTotal > state.monthlyIncome && !wasAlreadyOver) {
@@ -4978,24 +5029,13 @@ function CategoriesView({
       )}
       <div className="budget-overview">
         <div className="budget-overview-stats">
-          <label className="income-edit standalone">
+          <div className="income-readonly-card">
             <span>Monthly income</span>
-            <div className="income-edit-field">
-              <span>$</span>
-              <input
-                aria-label="Monthly income"
-                min="0"
-                type="number"
-                value={state.monthlyIncome}
-                onChange={(event) =>
-                  onCommit(
-                    { ...state, monthlyIncome: Number(event.target.value) },
-                    audit('Monthly income updated', money(Number(event.target.value) || 0)),
-                  )
-                }
-              />
-            </div>
-          </label>
+            <strong>{money(state.monthlyIncome)}</strong>
+            <button className="text-button" onClick={onOpenSettings} type="button">
+              Edit in Settings <ArrowRight size={14} />
+            </button>
+          </div>
           <div className={`budget-total-stat ${isOverBudget ? 'over' : ''}`}>
             <span>Total budgeted</span>
             <strong>{money(totalBudgeted)}</strong>
@@ -5099,7 +5139,7 @@ function CategoriesView({
               </tr>
               {items.map((category) => (
                 <tr
-                  className={`${category.group.toLowerCase()}${category.archived ? ' archived' : ''}`}
+                  className={category.group.toLowerCase()}
                   key={category.id}
                 >
                   <td>
@@ -5177,36 +5217,20 @@ function CategoriesView({
                   <td>
                     <div className="category-setting-actions">
                       <button
-                        className="text-button"
-                        onClick={() =>
-                          onCommit(
-                            {
-                              ...state,
-                              categories: state.categories.map((item) =>
-                                item.id === category.id
-                                  ? { ...item, archived: !item.archived }
-                                  : item,
-                              ),
-                            },
-                            audit(
-                              category.archived ? 'Category restored' : 'Category archived',
-                              category.name,
-                            ),
-                          )
-                        }
-                        type="button"
-                      >
-                        {category.archived ? 'Restore' : 'Archive'}
-                      </button>
-                      <button
                         className="icon-button danger"
                         onClick={() => {
-                          if (
-                            !window.confirm(
-                              `Delete ${category.name}? Its past transactions will move to "Needs review".`,
-                            )
+                          const confirmed = window.confirm(
+                            `Delete ${category.name}? Past transactions will move to "Needs review".`,
                           )
+                          if (!confirmed) {
                             return
+                          }
+                          const confirmedAgain = window.confirm(
+                            `Are you absolutely sure you want to delete ${category.name}? This can't be undone.`,
+                          )
+                          if (!confirmedAgain) {
+                            return
+                          }
                           onCommit(
                             {
                               ...state,
@@ -5370,15 +5394,25 @@ function SettingsView({
         description="Manage the parts of Tally that shape your daily experience."
       />
       <div className="settings-tabs">
-        {(['profile', 'accounts'] as const).map((item) => (
+        {(['profile', 'accounts', 'budget'] as const).map((item) => (
           <button
             className={tab === item ? 'active' : ''}
             key={item}
             onClick={() => onTab(item)}
             type="button"
           >
-            {item === 'profile' ? <UserRound size={17} /> : <CreditCard size={17} />}
-            {item}
+            {item === 'profile' ? (
+              <UserRound size={17} />
+            ) : item === 'accounts' ? (
+              <CreditCard size={17} />
+            ) : (
+              <Tag size={17} />
+            )}
+            {item === 'profile'
+              ? 'Profile'
+              : item === 'accounts'
+                ? 'Accounts'
+                : 'Envelopes & Budget'}
           </button>
         ))}
       </div>
@@ -5405,6 +5439,21 @@ function SettingsView({
                     profile: { ...state.profile, username: event.target.value },
                   })
                 }
+              />
+            </label>
+            <label>
+              Monthly income
+              <input
+                min="0"
+                type="number"
+                value={state.monthlyIncome}
+                onChange={(event) => {
+                  const nextIncome = Number(event.target.value) || 0
+                  onCommit(
+                    { ...state, monthlyIncome: nextIncome },
+                    audit('Monthly income updated', money(nextIncome)),
+                  )
+                }}
               />
             </label>
             <label>
@@ -5449,18 +5498,6 @@ function SettingsView({
             <button className="outline-action full" onClick={onLogout} type="button">
               <LogOut size={17} /> Lock this session
             </button>
-            <div className="clean-slate-entry">
-              <strong className="clean-slate-entry-title">
-                <Sparkles size={16} /> Need a reset?
-              </strong>
-              <p>
-                Falling behind happens. Start fresh whenever you need to-your next step matters
-                more than your last one.
-              </p>
-              <button className="outline-action full" onClick={openCleanSlate} type="button">
-                Clean Slate
-              </button>
-            </div>
             <div className="danger-zone">
               <strong>Delete account</strong>
               <p>
@@ -5564,6 +5601,26 @@ function SettingsView({
               </label>
             </article>
           ))}
+        </section>
+      )}
+      {tab === 'budget' && (
+        <section className="settings-panel">
+          <h2>Envelopes and budget settings</h2>
+          <p className="section-copy">
+            Manage how your envelope budget behaves, including full reset options.
+          </p>
+          <div className="clean-slate-entry">
+            <strong className="clean-slate-entry-title">
+              <Sparkles size={16} /> Need a reset?
+            </strong>
+            <p>
+              Falling behind happens. Start fresh whenever you need to-your next step matters more
+              than your last one.
+            </p>
+            <button className="outline-action full" onClick={openCleanSlate} type="button">
+              Clean Slate
+            </button>
+          </div>
         </section>
       )}
 
@@ -6098,9 +6155,16 @@ function simulateCharge(
   state: PrototypeState,
   commit: (state: PrototypeState, entry?: AuditEntry) => void,
 ) {
-  if (!state.accounts || state.accounts.length === 0) {
-    return // Can't simulate without an account
+  const fallbackAccount: ConnectedAccount = {
+    id: 'simulated-account',
+    nickname: 'Primary checking',
+    institution: 'Simulated Bank',
+    lastFour: '0000',
+    status: 'connected',
+    included: true,
   }
+  const account = state.accounts[0] ?? fallbackAccount
+  const accounts = state.accounts.length > 0 ? state.accounts : [fallbackAccount]
 
   // Pick a random transaction from the 100 examples
   const template = pickRandomTransaction(exampleTransactions)
@@ -6122,14 +6186,14 @@ function simulateCharge(
     rawDescription: `SQ *${template['Transaction name'].toUpperCase()}`,
     amount: template.Cost,
     categoryId: null,
-    accountId: state.accounts[0].id,
+    accountId: account.id,
     status: 'pending',
     source: 'bank',
     notes: '',
     spreadMonths: 1,
   }
   commit(
-    { ...state, transactions: [transaction, ...state.transactions] },
+    { ...state, accounts, transactions: [transaction, ...state.transactions] },
     audit(
       'Bank charge received',
       `${transaction.merchant} ${money(transaction.amount)} added to the uncategorized inbox. Suggested category: ${recommendation.reason}`,

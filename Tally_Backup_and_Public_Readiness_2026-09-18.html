@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tally Backup and Public Readiness Notes</title>
+  <style>
+    :root {
+      --bg: #f7f5ef;
+      --card: #ffffff;
+      --text: #1f2933;
+      --muted: #5f6c76;
+      --accent: #14532d;
+      --border: #d9e2ec;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% 10%, #fff8e6 0%, transparent 35%),
+        radial-gradient(circle at 90% 15%, #e6f4ea 0%, transparent 28%),
+        var(--bg);
+      line-height: 1.6;
+    }
+
+    .wrap {
+      max-width: 980px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 8px 28px rgba(15, 23, 42, 0.08);
+      padding: 28px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      color: var(--accent);
+      font-size: 2rem;
+      line-height: 1.2;
+    }
+
+    .meta {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 0.98rem;
+    }
+
+    h2 {
+      margin-top: 26px;
+      margin-bottom: 10px;
+      font-size: 1.3rem;
+      color: #0f3d2e;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+    }
+
+    ol {
+      margin: 0;
+      padding-left: 22px;
+    }
+
+    li { margin: 6px 0; }
+
+    code {
+      background: #f0f4f8;
+      border: 1px solid #d6e0ea;
+      border-radius: 6px;
+      padding: 1px 6px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.95em;
+    }
+
+    .footer {
+      margin-top: 24px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <article class="card">
+      <h1>Tally Backup and Public Readiness Notes</h1>
+      <p class="meta">Session Date: 2026-09-18</p>
+
+      <h2>1. What Was Completed</h2>
+      <ol>
+        <li>Created a GitHub repository for Tally and connected the local workspace.</li>
+        <li>Initialized Git locally and pushed source files to GitHub.</li>
+        <li>Verified backup integrity by cloning into a new folder and building/running from GitHub-only files.</li>
+        <li>Added one-command backup automation script at <code>scripts/backup-to-github.ps1</code>.</li>
+        <li>Confirmed backend and frontend can run from a clean clone without hidden dependency on the original workspace.</li>
+      </ol>
+
+      <h2>2. Security Actions Completed</h2>
+      <ol>
+        <li>A leaked OpenAI key was detected during push protection checks.</li>
+        <li>The key value was removed from <code>connected-envelope-budget/backend/appsettings.Development.json</code>.</li>
+        <li>Ignore rules were updated in <code>.gitignore</code> to keep development secrets and build artifacts out of Git.</li>
+        <li>Initial commit history was rebuilt and pushed cleanly.</li>
+        <li>The original OpenAI key was revoked and replaced by a new key.</li>
+      </ol>
+
+      <h2>3. Current Backup Status</h2>
+      <ol>
+        <li>GitHub is now the active source backup for Tally.</li>
+        <li>Source files are syncing correctly to the <code>main</code> branch.</li>
+        <li>Intentionally excluded files remain local-only, including development secrets and generated artifacts.</li>
+        <li>Routine backup is now a single command via <code>scripts/backup-to-github.ps1</code>.</li>
+      </ol>
+
+      <h2>4. Clean-Room Validation Results</h2>
+      <ol>
+        <li>Fresh clone from GitHub into a separate test folder succeeded.</li>
+        <li>Backend restore/build/run succeeded.</li>
+        <li>Frontend install/build/dev server succeeded.</li>
+        <li>Endpoint checks returned successful responses.</li>
+        <li><code>Failed to fetch</code> was traced to backend not running at that moment, not repository corruption.</li>
+      </ol>
+
+      <h2>5. Public Sharing Preparation Guidance</h2>
+      <ol>
+        <li>Keep all API keys out of source control permanently.</li>
+        <li>Use environment variables or cloud secret manager for keys.</li>
+        <li>Keep frontend calling backend only; backend calls OpenAI.</li>
+        <li>Use least-privilege API key permissions.</li>
+        <li>Enable GitHub Secret Scanning and Push Protection.</li>
+        <li>Maintain separate keys for development, staging, and production.</li>
+        <li>Add server-side auth and rate limiting before broader public release.</li>
+      </ol>
+
+      <h2>6. Recommended Ongoing Procedure</h2>
+      <ol>
+        <li>Make changes locally.</li>
+        <li>Run backup script after each work session.</li>
+        <li>Verify push success.</li>
+        <li>Before major public milestones, run another clean-clone test from GitHub and confirm startup from scratch.</li>
+      </ol>
+
+      <div class="footer">
+        Backup command:<br>
+        <code>powershell -ExecutionPolicy Bypass -File .\scripts\backup-to-github.ps1</code>
+      </div>
+    </article>
+  </main>
+</body>
+</html>

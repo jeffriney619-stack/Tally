@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Calendar, Check, ChevronDown, X } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowRight, Calendar, Check, ChevronDown, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { monthLabel, shortDate, money } from './App'
 import { MoneyPlantMascot } from './MoneyPlantMascot'
@@ -154,6 +154,36 @@ function calculateTurningPoint(stories: BalanceStoryCategory[]): TurningPointIns
   return crossingEvents[0]
 }
 
+function reduceStoryPointsForCompact(points: BalanceStoryPoint[]): BalanceStoryPoint[] {
+  if (points.length <= 3) return points
+
+  const first = points[0]
+  const lastPointByDay = new Map<string, BalanceStoryPoint>()
+
+  for (let i = 1; i < points.length; i += 1) {
+    const point = points[i]
+    lastPointByDay.set(point.date, point)
+  }
+
+  const dailyPoints = Array.from(lastPointByDay.values()).sort((a, b) => a.date.localeCompare(b.date))
+  const maxPoints = 9
+
+  if (dailyPoints.length <= maxPoints) {
+    return [first, ...dailyPoints]
+  }
+
+  const sampled: BalanceStoryPoint[] = []
+  for (let i = 0; i < maxPoints; i += 1) {
+    const index = Math.round((i * (dailyPoints.length - 1)) / (maxPoints - 1))
+    sampled.push(dailyPoints[index])
+  }
+
+  const deduped = sampled.filter(
+    (point, index, list) => index === 0 || point.date !== list[index - 1].date,
+  )
+  return [first, ...deduped]
+}
+
 function BalanceStorylinePrototype({
   monthKey,
   stories,
@@ -161,8 +191,32 @@ function BalanceStorylinePrototype({
   monthKey: string
   stories: BalanceStoryCategory[]
 }) {
+  const [compactMode, setCompactMode] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches,
+  )
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const media = window.matchMedia('(max-width: 760px)')
+    const onChange = (event: MediaQueryListEvent) => setCompactMode(event.matches)
+    setCompactMode(media.matches)
+    media.addEventListener('change', onChange)
+    return () => media.removeEventListener('change', onChange)
+  }, [])
+
+  const chartStories = useMemo(
+    () =>
+      compactMode
+        ? stories.map((story) => ({
+            ...story,
+            points: reduceStoryPointsForCompact(story.points),
+          }))
+        : stories,
+    [compactMode, stories],
+  )
+
   const width = 980
-  const height = Math.max(360, 240 + stories.length * 28)
+  const height = Math.max(360, 240 + chartStories.length * 28)
   const margin = { top: 24, right: 250, bottom: 30, left: 74 }
   const innerWidth = width - margin.left - margin.right
   const innerHeight = height - margin.top - margin.bottom
@@ -172,7 +226,7 @@ function BalanceStorylinePrototype({
   const daysInMonth = new Date(Number(yearRaw), Number(monthRaw), 0).getDate()
   const end = toUtcDate(`${monthKey}-${String(daysInMonth).padStart(2, '0')}`).getTime()
 
-  const values = stories.flatMap((story) => story.points.map((point) => point.balance))
+  const values = chartStories.flatMap((story) => story.points.map((point) => point.balance))
   const minValue = Math.min(0, ...values)
   const maxValue = Math.max(...values, 0)
   const paddedMin = Math.floor((minValue - 100) / 100) * 100
@@ -186,13 +240,17 @@ function BalanceStorylinePrototype({
   }
   const yForValue = (value: number) => margin.top + ((paddedMax - value) / range) * innerHeight
 
-  const tickCount = 6
-  const yTicks = Array.from({ length: tickCount + 1 }, (_, i) => {
+  const tickCount = compactMode ? 4 : 6
+  const generatedTicks = Array.from({ length: tickCount + 1 }, (_, i) => {
     const value = paddedMin + (range / tickCount) * i
     return Math.round(value)
   })
+  const yTicks = Array.from(new Set([...generatedTicks, 0])).sort((a, b) => a - b)
 
-  const dateTicks = [1, 8, 15, 22, 29]
+  const dateTickDays = compactMode
+    ? [1, Math.max(1, Math.round(daysInMonth / 2)), daysInMonth]
+    : [1, 8, 15, 22, 29]
+  const dateTicks = Array.from(new Set(dateTickDays))
     .filter((day) => day <= daysInMonth)
     .map((day) => `${monthKey}-${String(day).padStart(2, '0')}`)
 
@@ -200,7 +258,7 @@ function BalanceStorylinePrototype({
   const chartEndDate = `${monthKey}-${String(daysInMonth).padStart(2, '0')}`
   const chartEndX = xForDate(chartEndDate)
 
-  const rawLabelLayout = stories
+  const rawLabelLayout = chartStories
     .map((story, index) => ({
       categoryId: story.categoryId,
       color: palette[index % palette.length],
@@ -250,6 +308,16 @@ function BalanceStorylinePrototype({
                   y2={y}
                   className={isZero ? 'review-story-grid-line zero' : 'review-story-grid-line'}
                 />
+                {isZero && (
+                  <text
+                    x={width - margin.right - 10}
+                    y={y - 7}
+                    textAnchor="end"
+                    className="review-story-zero-label"
+                  >
+                    $0 baseline
+                  </text>
+                )}
                 <text x={margin.left - 10} y={y + 4} textAnchor="end" className="review-story-axis-label">
                   {money(tick)}
                 </text>
@@ -269,7 +337,7 @@ function BalanceStorylinePrototype({
             )
           })}
 
-          {stories.map((story, index) => {
+          {chartStories.map((story, index) => {
             const color = palette[index % palette.length]
             const startPoint = story.points[0]
             let path = `M ${xForDate(startPoint.date)} ${yForValue(startPoint.balance)}`
@@ -292,19 +360,20 @@ function BalanceStorylinePrototype({
             return (
               <g key={story.categoryId}>
                 <path d={path} fill="none" stroke={color} strokeWidth={3} strokeLinecap="round" />
-                {story.points.map((point, pointIndex) => {
-                  if (pointIndex === 0) return null
-                  return (
-                    <circle
-                      key={`${story.categoryId}-${point.date}-${pointIndex}`}
-                      cx={xForDate(point.date)}
-                      cy={yForValue(point.balance)}
-                      r={5}
-                      fill={color}
-                      className="review-story-point"
-                    />
-                  )
-                })}
+                {!compactMode &&
+                  story.points.map((point, pointIndex) => {
+                    if (pointIndex === 0) return null
+                    return (
+                      <circle
+                        key={`${story.categoryId}-${point.date}-${pointIndex}`}
+                        cx={xForDate(point.date)}
+                        cy={yForValue(point.balance)}
+                        r={5}
+                        fill={color}
+                        className="review-story-point"
+                      />
+                    )
+                  })}
                 {adjusted && (
                   <line
                     x1={finalX + 4}
@@ -698,12 +767,11 @@ export function MonthInReviewFlow({
     () =>
       filteredBalanceStories.map((story) => {
         const spent = story.points.reduce((sum, point) => sum + (point.amount ?? 0), 0)
-        const balanceChange = story.endBalance - story.startBalance
         return {
           categoryId: story.categoryId,
           categoryName: story.categoryName,
           spent,
-          balanceChange,
+          startBalance: story.startBalance,
           newBalance: story.endBalance,
         }
       }),
@@ -713,11 +781,11 @@ export function MonthInReviewFlow({
     return balanceSummaryRows.reduce(
       (totals, row) => {
         totals.spent += row.spent
-        totals.balanceChange += row.balanceChange
+        totals.startBalance += row.startBalance
         totals.newBalance += row.newBalance
         return totals
       },
-      { spent: 0, balanceChange: 0, newBalance: 0 },
+      { spent: 0, startBalance: 0, newBalance: 0 },
     )
   }, [balanceSummaryRows])
   const turningPoint = useMemo(
@@ -1115,24 +1183,18 @@ export function MonthInReviewFlow({
                       <article key={row.categoryId} className="review-balance-summary-row">
                         <div className="review-balance-summary-name">
                           <strong>{row.categoryName}</strong>
-                          <span>{positive ? 'Money saved' : 'Hole dug bigger'}</span>
                         </div>
                         <div>
                           <small>Spent</small>
                           <strong>{money(row.spent)}</strong>
                         </div>
                         <div>
-                          <small>Balance Change</small>
-                          <strong className={positive ? 'up' : 'down'}>
-                            {positive ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
-                            {money(Math.abs(row.balanceChange))}
-                          </strong>
+                          <small>Available before</small>
+                          <strong>{money(row.startBalance)}</strong>
                         </div>
                         <div>
-                          <small>New Balance</small>
-                          <strong className={positive ? 'up' : 'down'}>
-                            {money(row.newBalance)}
-                          </strong>
+                          <small>Available after</small>
+                          <strong className={positive ? 'up' : 'down'}>{money(row.newBalance)}</strong>
                         </div>
                       </article>
                     )
@@ -1143,14 +1205,11 @@ export function MonthInReviewFlow({
                       <strong>{money(balanceSummaryTotals.spent)}</strong>
                     </div>
                     <div>
-                      <small>Net balance movement</small>
-                      <strong className={balanceSummaryTotals.balanceChange >= 0 ? 'up' : 'down'}>
-                        {balanceSummaryTotals.balanceChange >= 0 ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
-                        {money(Math.abs(balanceSummaryTotals.balanceChange))}
-                      </strong>
+                      <small>Combined before</small>
+                      <strong>{money(balanceSummaryTotals.startBalance)}</strong>
                     </div>
                     <div>
-                      <small>Combined new balance</small>
+                      <small>Combined after</small>
                       <strong className={balanceSummaryTotals.newBalance >= 0 ? 'up' : 'down'}>
                         {money(balanceSummaryTotals.newBalance)}
                       </strong>

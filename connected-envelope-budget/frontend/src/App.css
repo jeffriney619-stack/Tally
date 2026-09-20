@@ -1143,7 +1143,7 @@ tr.over .row-progress-fill {
 }
 
 .manual-transaction-modal {
-  width: min(92vw, 520px);
+  width: min(94vw, 620px);
 }
 
 .manual-transaction-form {
@@ -1163,6 +1163,12 @@ tr.over .row-progress-fill {
 .manual-transaction-form input,
 .manual-transaction-form select {
   width: 100%;
+  min-height: 46px;
+  padding: 11px 12px;
+  font-size: 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
 }
 
 /* ---------- Categories page: budget overview + donut ---------- */
@@ -1190,6 +1196,19 @@ tr.over .row-progress-fill {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+.income-readonly-card {
+  display: grid;
+  gap: 4px;
+}
+.income-readonly-card > span {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.income-readonly-card > strong {
+  font-family: "Newsreader", serif;
+  font-size: 1.2rem;
 }
 .income-edit {
   display: flex;
@@ -1400,6 +1419,55 @@ tr.over .row-progress-fill {
   .cell-progress {
     min-width: 0;
     margin-top: 8px;
+  }
+
+  .category-table:not(.editable-table):not(.forecast-table) tbody tr:not(.group-header-row) {
+    display: grid;
+    grid-template-columns: minmax(130px, 1.1fr) minmax(105px, 1fr) minmax(86px, auto) minmax(78px, auto);
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .category-table:not(.editable-table):not(.forecast-table) tbody tr:not(.group-header-row) > td {
+    margin: 0;
+    padding: 0;
+  }
+
+  .category-table:not(.editable-table):not(.forecast-table) .cat-name-cell {
+    margin-left: 0;
+    padding-left: 8px;
+  }
+
+  .category-table:not(.editable-table):not(.forecast-table) .cell-progress {
+    margin-top: 0;
+  }
+
+  .category-table:not(.editable-table):not(.forecast-table) .row-progress-track {
+    height: 12px;
+    border-radius: 999px;
+  }
+
+  .category-table:not(.editable-table):not(.forecast-table) .row-progress-pct {
+    padding: 1px 7px;
+    font-size: 0.61rem;
+  }
+
+  .category-table:not(.editable-table):not(.forecast-table) .row-progress-meta {
+    display: none;
+  }
+
+  .category-table:not(.editable-table):not(.forecast-table) .available-amount-cell strong {
+    font-size: 1rem;
+  }
+
+  .category-table:not(.editable-table):not(.forecast-table) .available-amount-cell small {
+    display: none;
+  }
+
+  .category-table:not(.editable-table):not(.forecast-table) .status-pill {
+    font-size: 0.56rem;
+    padding: 3px 6px;
   }
 }
 
@@ -1910,6 +1978,9 @@ tr.over .row-progress-fill {
   min-width: 0;
 }
 .review-tx-main strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.82rem;
 }
 .review-tx-main small {
@@ -2010,6 +2081,119 @@ tr.over .row-progress-fill {
   display: flex;
   gap: 10px;
   justify-content: center;
+}
+
+@media (max-width: 760px) {
+  .review-shell {
+    gap: 12px;
+  }
+
+  .review-step {
+    padding: 14px;
+  }
+
+  .review-step-header {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .review-bubble {
+    padding: 10px 11px;
+    font-size: 0.76rem;
+    line-height: 1.4;
+  }
+
+  .review-tx-row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "main amount"
+      "vendor remove";
+    gap: 7px;
+    padding: 10px;
+  }
+
+  .review-tx-main {
+    grid-area: main;
+  }
+
+  .review-tx-amount {
+    grid-area: amount;
+    font-size: 0.86rem;
+  }
+
+  .vendor-toggle {
+    grid-area: vendor;
+    font-size: 0.62rem;
+    line-height: 1.25;
+    align-items: flex-start;
+  }
+
+  .review-remove {
+    grid-area: remove;
+    align-self: center;
+    justify-self: end;
+  }
+
+  .manual-card {
+    padding: 12px 14px;
+  }
+
+  .manual-card strong {
+    font-size: 1rem;
+    line-height: 1.15;
+  }
+
+  .manual-card-amount {
+    margin-top: 3px;
+    font-size: 0.88rem;
+  }
+
+  .manual-card small {
+    margin-top: 2px;
+    font-size: 0.66rem;
+  }
+
+  .envelope-groups {
+    gap: 10px;
+  }
+
+  .envelope-group-label {
+    margin: 0 0 5px;
+    font-size: 0.62rem;
+  }
+
+  .review-shell .envelope-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .review-shell .envelope-tile {
+    gap: 4px;
+    padding: 8px 6px;
+    min-height: 66px;
+    font-size: 0.62rem;
+    border-radius: 5px;
+  }
+
+  .review-shell .envelope-tile span {
+    line-height: 1.15;
+  }
+
+  .review-shell .envelope-tile svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .manual-controls {
+    gap: 7px;
+    align-items: center;
+  }
+
+  .manual-controls .outline-action {
+    min-height: 34px;
+    padding: 0 10px;
+    font-size: 0.7rem;
+  }
 }
 .settings-tabs {
   display: flex;
@@ -3095,6 +3279,9 @@ tr.over .row-progress-fill {
   .envelope-grid {
     grid-template-columns: 1fr;
   }
+  .review-shell .envelope-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .change-strip button {
     min-height: 62px;
   }
@@ -3481,6 +3668,21 @@ tr.over .row-progress-fill {
   font: inherit;
   line-height: 1.45;
   resize: vertical;
+}
+.assistant-checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 2px 0;
+  color: var(--ink);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+.assistant-checkbox-row input {
+  width: 16px;
+  min-width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
 }
 .assistant-summary {
   margin: 0;
@@ -4502,8 +4704,14 @@ tr.over .row-progress-fill {
 }
 
 .review-story-grid-line.zero {
-  stroke: #9daea4;
-  stroke-dasharray: 6 5;
+  stroke: #2a3e34;
+  stroke-width: 3;
+}
+
+.review-story-zero-label {
+  font-size: 12px;
+  font-weight: 700;
+  fill: #2a3e34;
 }
 
 .review-story-vertical-grid {
@@ -4704,11 +4912,6 @@ tr.over .row-progress-fill {
 
 .review-balance-summary-name strong {
   font-size: 1.02rem;
-}
-
-.review-balance-summary-name span {
-  color: #9eb0a7;
-  font-size: 0.84rem;
 }
 
 .review-balance-summary-row strong.up,
@@ -6004,11 +6207,7 @@ tr.over .row-progress-fill {
   .review-badge,
   .intro-number-shift .before,
   .intro-number-shift .after,
-  .intro-mascot-cue .mood-mascot,
-  .clean-slate-before,
-  .clean-slate-after,
-  .clean-envelopes span,
-  .clean-slate-action {
+  .intro-mascot-cue .mood-mascot {
     animation: none;
   }
 
@@ -6076,6 +6275,11 @@ tr.over .row-progress-fill {
   .transfer-balance .after {
     opacity: 1;
     transform: none;
+  }
+
+  .assistant-checkbox-row {
+    gap: 8px;
+    font-size: 0.78rem;
   }
 }
 

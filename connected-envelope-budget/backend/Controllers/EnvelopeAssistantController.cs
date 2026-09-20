@@ -38,13 +38,13 @@ public sealed class EnvelopeAssistantController(IConfiguration config, IHttpClie
             return BadRequest(new ProblemDetails { Detail = "answers must be a JSON object." });
         }
 
-        var endpoint = config["AiEnvelopeAssistant:Endpoint"];
-        var apiKey = config["AiEnvelopeAssistant:ApiKey"];
+        var endpoint = ResolveEndpoint();
+        var apiKey = ResolveApiKey();
         if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(apiKey))
         {
             return StatusCode(StatusCodes.Status503ServiceUnavailable, new ProblemDetails
             {
-                Detail = "AI assistant is not configured on the backend. Set AiEnvelopeAssistant:Endpoint and AiEnvelopeAssistant:ApiKey."
+                Detail = "AI assistant is not configured on the backend. Set AiEnvelopeAssistant:ApiKey (or OPENAI_API_KEY). Optional endpoint: AiEnvelopeAssistant:Endpoint (or OPENAI_API_ENDPOINT)."
             });
         }
 
@@ -78,13 +78,13 @@ public sealed class EnvelopeAssistantController(IConfiguration config, IHttpClie
         EnvelopeAssistantRequest request,
         CancellationToken cancellationToken)
     {
-        var endpoint = config["AiEnvelopeAssistant:Endpoint"];
-        var apiKey = config["AiEnvelopeAssistant:ApiKey"];
-        var model = config["AiEnvelopeAssistant:Model"] ?? "gpt-4.1-mini";
+        var endpoint = ResolveEndpoint();
+        var apiKey = ResolveApiKey();
+        var model = ResolveModel();
 
         if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(apiKey))
         {
-            return (false, null, null, "AI assistant is not configured on the backend. Set AiEnvelopeAssistant:Endpoint and AiEnvelopeAssistant:ApiKey.");
+            return (false, null, null, "AI assistant is not configured on the backend. Set AiEnvelopeAssistant:ApiKey (or OPENAI_API_KEY). Optional endpoint: AiEnvelopeAssistant:Endpoint (or OPENAI_API_ENDPOINT).");
         }
 
         var client = httpClientFactory.CreateClient();
@@ -146,12 +146,33 @@ Return only JSON matching the supplied schema.
             using var response = await client.PostAsync(endpoint, content, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                logger.LogWarning("Envelope assistant model call failed with status {StatusCode}", response.StatusCode);
+                var providerBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                logger.LogWarning("Envelope assistant model call failed with status {StatusCode}. Body: {Body}", response.StatusCode, providerBody);
+
+                string? providerDetail = null;
+                try
+                {
+                    using var bodyJson = JsonDocument.Parse(providerBody);
+                    if (bodyJson.RootElement.TryGetProperty("error", out var errorNode) &&
+                        errorNode.ValueKind == JsonValueKind.Object &&
+                        errorNode.TryGetProperty("message", out var messageNode) &&
+                        messageNode.ValueKind == JsonValueKind.String)
+                    {
+                        providerDetail = messageNode.GetString();
+                    }
+                }
+                catch
+                {
+                    // Keep provider detail null when the response body is not JSON.
+                }
+
                 if ((int)response.StatusCode == 429)
                 {
                     return (false, null, model, "AI assistant is configured, but the model provider returned rate limit/quota (429). Check your API plan, usage limits, and billing status.");
                 }
-                return (false, null, model, $"AI assistant call failed with status {(int)response.StatusCode} ({response.StatusCode}).");
+                return (false, null, model, providerDetail is not null
+                    ? $"AI assistant call failed with status {(int)response.StatusCode} ({response.StatusCode}): {providerDetail}"
+                    : $"AI assistant call failed with status {(int)response.StatusCode} ({response.StatusCode}).");
             }
 
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -261,5 +282,46 @@ Return only JSON matching the supplied schema.
     {
         var chars = name.Trim().ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray();
         return new string(chars);
+    }
+
+    private string ResolveEndpoint()
+    {
+        var configured = config["AiEnvelopeAssistant:Endpoint"];
+        if (!string.IsNullOrWhiteSpace(configured))
+        {
+            return configured;
+        }
+
+        var envEndpoint = Environment.GetEnvironmentVariable("OPENAI_API_ENDPOINT");
+        if (!string.IsNullOrWhiteSpace(envEndpoint))
+        {
+            return envEndpoint;
+        }
+
+        return "https://api.openai.com/v1/chat/completions";
+    }
+
+    private string? ResolveApiKey()
+    {
+        var configured = config["AiEnvelopeAssistant:ApiKey"];
+        if (!string.IsNullOrWhiteSpace(configured))
+        {
+            return configured;
+        }
+
+        var envKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+        return string.IsNullOrWhiteSpace(envKey) ? null : envKey;
+    }
+
+    private string ResolveModel()
+    {
+        var configured = config["AiEnvelopeAssistant:Model"];
+        if (!string.IsNullOrWhiteSpace(configured))
+        {
+            return configured;
+        }
+
+        var envModel = Environment.GetEnvironmentVariable("OPENAI_MODEL");
+        return string.IsNullOrWhiteSpace(envModel) ? "gpt-4.1-mini" : envModel;
     }
 }
