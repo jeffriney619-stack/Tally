@@ -103,12 +103,11 @@ export type ObligationPayment = {
   paidAt: string
 }
 
-export type AssistantTemplateSource = 'baseline' | 'universal_selection' | 'ai_custom' | 'user_added'
+export type AssistantTemplateSource = 'rule' | 'ai_custom' | 'user_added'
 
 export type AssistantCategoryDraft = {
   id: string
-  universalCategoryId: string | null
-  customName: string | null
+  name: string
   group: 'needs' | 'wants' | 'savings'
   source: AssistantTemplateSource
   reason: string | null
@@ -117,26 +116,67 @@ export type AssistantCategoryDraft = {
   displayOrder: number
 }
 
-export type AssistantQuestionnaireAnswers = {
-  recreation: Record<string, unknown>
-  food: Record<string, unknown>
-  travel: Record<string, unknown>
-  carExpenses: Record<string, unknown>
-  donations: Record<string, unknown>
-  eatingOut: Record<string, unknown>
-  pets: Record<string, unknown>
-  home: Record<string, unknown>
-  savings: Record<string, unknown>
-  specialAttention: Record<string, unknown>
+// Adaptive Budget Onboarding — one entry per section of the questionnaire
+// (see Tally_Adaptive_Budget_Onboarding_Feature_Spec.md). All fields are
+// nullable/empty-array by default so partial progress can be evaluated by
+// the live-understanding panel and the recommendation engine at any time.
+export type HouseholdType = 'solo' | 'couple' | 'family' | 'shared'
+export type BudgetDetailLevel = 'simple' | 'balanced' | 'detailed'
+
+export type OnboardingAnswers = {
+  household: {
+    type: HouseholdType | null
+    detail: BudgetDetailLevel | null
+    memberNames: string
+  }
+  essentials: {
+    applicable: string[]
+    rentUtilities: 'separate' | 'combine' | 'included' | null
+    insurance: 'one' | 'separate' | 'ordinary' | null
+  }
+  food: {
+    areas: string[]
+    casualMeal: 'dining_out' | 'fun_money' | 'ask' | null
+    specialFood: string
+  }
+  fun: {
+    approach: 'one' | 'by_person' | 'by_category' | null
+    categories: string[]
+    specialAttention: string
+  }
+  transportation: {
+    costs: string[]
+    detail: 'one' | 'car_noncar' | 'gas_maintenance_other' | 'none' | null
+    trips: 'one' | 'work_personal' | 'major_trips' | 'normal_categories' | 'rarely' | null
+    tripNames: string
+  }
+  homeLife: {
+    areas: string[]
+    petOrg: 'one' | 'pet_vet' | 'pet_vet_fun' | 'none' | null
+    homeOrg: 'one' | 'repairs_furniture' | 'maintenance_projects' | 'none' | null
+    giving: 'giving' | 'seasonal' | 'none' | null
+    subscriptions: 'one' | 'essential_entertainment' | 'ordinary' | 'none' | null
+  }
+  goals: {
+    savingsApproach:
+      | 'emergency_plus'
+      | 'below_means'
+      | 'one_goal'
+      | 'several_goals'
+      | 'not_saving'
+      | null
+    goalNames: string
+    debtGoals: string[]
+  }
 }
 
 export type AssistantSessionState = {
   status: 'in_progress' | 'generating' | 'ready' | 'failed' | 'accepted' | 'abandoned'
-  currentQuestion: number
+  currentSection: number
   promptVersion: string
   modelName?: string
   summary?: string
-  answers: AssistantQuestionnaireAnswers
+  answers: OnboardingAnswers
   categories: AssistantCategoryDraft[]
   templateName?: string
   updatedAt: string

@@ -5,8 +5,8 @@ import {
   ArrowLeftRight,
   ArrowRight,
   Bot,
-  Car,
   Calendar,
+  Car,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -50,13 +50,15 @@ import {
 } from 'lucide-react'
 import { type FormEvent, useEffect, useRef, useState } from 'react'
 import './App.css'
-import exampleTransactionsRaw from './data/example_transactions.json'
+import { AdaptiveOnboarding } from './AdaptiveOnboarding'
 import moneyPlantLogo from './assets/money-plant.png'
+import exampleTransactionsRaw from './data/example_transactions.json'
 import { MoneyPlantMascot } from './MoneyPlantMascot'
+import { MonthInReviewFlow } from './MonthInReview'
+import { createEmptyOnboardingAnswers } from './onboardingEngine'
 import {
-  clearAuthToken,
   type CleanSlateResetType,
-  generateEnvelopeAssistantRecommendation,
+  clearAuthToken,
   getAuthToken,
   getPrototypeState,
   getSmsConsent,
@@ -75,16 +77,15 @@ import {
   type TransactionTemplate,
 } from './services/merchantCategorizer'
 import { TransactionReviewFlow } from './TransactionReview'
-import { MonthInReviewFlow } from './MonthInReview'
 import type {
   AdHocAdjustment,
   AssistantCategoryDraft,
-  AssistantQuestionnaireAnswers,
   AuditEntry,
   BudgetCategory,
   BudgetGroup,
   BudgetTransaction,
   ConnectedAccount,
+  OnboardingAnswers,
   PrototypeState,
 } from './types/budget'
 
@@ -3134,181 +3135,7 @@ const CATEGORY_SUGGESTIONS: CategorySuggestion[] = [
   },
 ]
 
-type AssistantQuestionKey =
-  | 'recreation'
-  | 'food'
-  | 'travel'
-  | 'carExpenses'
-  | 'donations'
-  | 'eatingOut'
-  | 'pets'
-  | 'home'
-  | 'savings'
-  | 'specialAttention'
-
-type AssistantQuestion = {
-  key: AssistantQuestionKey
-  title: string
-  mode: 'single' | 'multi' | 'text'
-  helperText?: string
-  options?: string[]
-}
-
-const TRAVEL_AIR_ROUTING_OPTIONS = [
-  'Air travel should qualify as trips/vacation',
-  'Air travel should be a transportation cost, unless it was for a trips/vacation',
-] as const
-
-const ASSISTANT_PROMPT_VERSION = 'envelope-assistant-v1'
-const ESSENTIALS_BASELINE_IDS = ['rentmortgage', 'groceries', 'transportation', 'insurance', 'utilities', 'emergencyfund']
-
-const ASSISTANT_QUESTIONS: AssistantQuestion[] = [
-  {
-    key: 'recreation',
-    title: 'How do you naturally organize recreational spending?',
-    mode: 'single',
-    options: [
-      'By person: my spending, partner spending, or children',
-      'By who I am with: friends, date nights, or family activities',
-      'By activity: golf, fitness, gaming, crafts, or another hobby',
-      'By broad category: entertainment, dining, or shopping',
-      'Mostly one category: fun money',
-      "I'm not sure yet",
-      'Let me describe how I view recreation expenses',
-    ],
-  },
-  {
-    key: 'food',
-    title: 'How would you organize food and drink purchases?',
-    mode: 'single',
-    options: [
-      'One category for everything',
-      'Groceries and Dining',
-      'Groceries, Dining, and Date Nights',
-      'Groceries plus Kitchen Extras',
-      'By purpose: Everyday Food, Health & Nutrition, and Social Dining',
-      "I'm not sure yet",
-      'Let me describe how I view food expenses',
-    ],
-  },
-  {
-    key: 'travel',
-    title: 'How do you think about travel expenses?',
-    mode: 'multi',
-    helperText: 'Select all that apply.',
-    options: [
-      'Keep trips/vacation separate from everyday transportation',
-      'Treat local transportation as one envelope (gas, rideshare, public transit, bikes)',
-      'Split transportation into Car and Non-car transportation',
-      'Use separate envelopes for Work Travel and Personal Trips/Vacation',
-      'Use one envelope for all travel and transportation',
-      "I'm not sure yet",
-      'Let me describe how I view travel expenses',
-    ],
-  },
-  {
-    key: 'carExpenses',
-    title: 'How do you think about car expenses?',
-    mode: 'single',
-    options: [
-      'Gas and car maintenance are separate',
-      'Everything in one',
-      'Gas as its own, and car maintenance typically covered by an emergency fund contribution',
-      'Gas, maintenance, and insurance should be separate',
-      'Gas and transportation can stay together, but maintenance should be separate',
-      "I'm not sure yet",
-      'Let me describe how I view car expenses',
-    ],
-  },
-  {
-    key: 'donations',
-    title: 'Do you budget for donations or charities?',
-    mode: 'single',
-    options: ['Yes', 'No', "I'm not sure yet", 'Let me describe how I view donation expenses'],
-  },
-  {
-    key: 'eatingOut',
-    title: 'Should eating out be considered a recreational, date, or social purchase, or be considered food?',
-    mode: 'single',
-    options: [
-      'Treat eating out as food with Dining',
-      'Treat date and social meals as recreation, separate from routine food spending',
-      "I'm not sure yet",
-      'Let me describe how I view eating-out expenses',
-    ],
-  },
-  {
-    key: 'pets',
-    title: 'Do you have a pet? If so, how do you think about vet bills, food, and recreational spending on the pet?',
-    mode: 'single',
-    options: [
-      "I don't own a pet",
-      'One Pet Care envelope for all pet expenses',
-      'Separate Vet Care from routine pet food and supplies',
-      'Separate Vet Care, Pet Food, and Pet Fun spending',
-      "I'm not sure yet",
-      'Let me describe how I view pet expenses',
-    ],
-  },
-  {
-    key: 'home',
-    title: 'Outside of utilities, how would you organize spending on your home (repairs, furniture, decor, etc.)?',
-    mode: 'single',
-    options: [
-      'Keep repairs, furniture, and decor in one Home envelope',
-      'Separate Home Repairs from Furniture/Decor',
-      'Separate routine Home Maintenance from larger Home Projects',
-      'Use separate envelopes for Indoor and Outdoor home projects',
-      'I do not need dedicated home envelopes right now',
-      "I'm not sure yet",
-      'Let me describe how I view home expenses',
-    ],
-  },
-  {
-    key: 'savings',
-    title: 'How do you currently think about saving money?',
-    mode: 'single',
-    options: [
-      'I am building an emergency fund and saving additional money on top of it',
-      'I try to spend a certain percentage below my means and save whatever remains',
-      'I am saving toward one specific goal',
-      'I divide my savings among several different goals',
-      'I am not actively saving yet',
-      "I'm not sure yet",
-      'Let me describe how I view savings expenses',
-    ],
-  },
-  {
-    key: 'specialAttention',
-    title: 'Is there one type of spending you make frequently, want to track individually, or want to be especially careful not to overspend on?',
-    mode: 'text',
-  },
-]
-
-function normalizedCategoryId(name: string) {
-  return name.toLowerCase().replace(/[^a-z0-9]/g, '')
-}
-
-function toSuggestionGroup(group: 'needs' | 'wants' | 'savings'): BudgetGroup {
-  if (group === 'needs') return 'Needs'
-  if (group === 'savings') return 'Savings'
-  return 'Wants'
-}
-
-function emptyAssistantAnswers(): AssistantQuestionnaireAnswers {
-  return {
-    recreation: {},
-    food: {},
-    travel: {},
-    carExpenses: {},
-    donations: {},
-    eatingOut: {},
-    pets: {},
-    home: {},
-    savings: {},
-    specialAttention: {},
-  }
-}
+const ASSISTANT_PROMPT_VERSION = 'adaptive-onboarding-v1'
 
 const INTRO_PAGES = [
   'opening',
@@ -3804,47 +3631,18 @@ function OnboardingWizard({
   )
   const [split, setSplit] = useState<AllocationSplit>({ needs: 50, wants: 30, savings: 20 })
   const [setupMode, setSetupMode] = useState<'manual' | 'ai' | null>(null)
-  const [assistantQuestionIndex, setAssistantQuestionIndex] = useState(
-    Math.max(0, (state.assistantSession?.currentQuestion ?? 1) - 1),
+  const [onboardingAnswers, setOnboardingAnswers] = useState<OnboardingAnswers>(
+    state.assistantSession?.answers ?? createEmptyOnboardingAnswers(),
   )
-  const [assistantSelections, setAssistantSelections] = useState<
-    Record<AssistantQuestionKey, string[]>
-  >({
-    recreation: [],
-    food: [],
-    travel: [],
-    carExpenses: [],
-    donations: [],
-    eatingOut: [],
-    pets: [],
-    home: [],
-    savings: [],
-    specialAttention: [],
-  })
-  const [assistantFollowUps, setAssistantFollowUps] = useState<Record<AssistantQuestionKey, string>>({
-    recreation: '',
-    food: '',
-    travel: '',
-    carExpenses: '',
-    donations: '',
-    eatingOut: '',
-    pets: '',
-    home: '',
-    savings: '',
-    specialAttention: '',
-  })
-  const [travelAirRouting, setTravelAirRouting] = useState<string>('')
-  const [assistantSummary, setAssistantSummary] = useState(state.assistantSession?.summary ?? '')
+  const [onboardingSection, setOnboardingSection] = useState(state.assistantSession?.currentSection ?? 0)
   const [assistantError, setAssistantError] = useState('')
-  const [assistantBusy, setAssistantBusy] = useState(false)
   const existingNames = new Set(state.categories.map((item) => item.name))
   const [selectedNames, setSelectedNames] = useState<Set<string>>(new Set(existingNames))
   const [curatedNames, setCuratedNames] = useState<Set<string>>(
     new Set(
       (state.assistantSession?.categories ?? [])
         .filter((item) => item.selected)
-        .map((item) => item.customName)
-        .filter((item): item is string => Boolean(item)),
+        .map((item) => item.name),
     ),
   )
   const [customSuggestions, setCustomSuggestions] = useState<CategorySuggestion[]>([])
@@ -3883,7 +3681,6 @@ function OnboardingWizard({
     (group) => groupAllocated[group] > groupTargets[group] + 0.5,
   )
   const onboardingSuggestions = [...CATEGORY_SUGGESTIONS, ...customSuggestions]
-  const currentAssistantQuestion = ASSISTANT_QUESTIONS[assistantQuestionIndex]
 
   function estimateEnvelopeAmount(category: BudgetCategory): number {
     const groupCategories = activeCategories.filter((item) => item.group === category.group)
@@ -3939,104 +3736,6 @@ function OnboardingWizard({
     setSelectedNames(new Set([...existingNames, ...names, miscName]))
   }
 
-  function setAssistantSingleAnswer(key: AssistantQuestionKey, value: string) {
-    setAssistantSelections((prev) => ({ ...prev, [key]: [value] }))
-  }
-
-  function toggleAssistantMultiAnswer(key: AssistantQuestionKey, value: string) {
-    setAssistantSelections((prev) => {
-      const existing = prev[key]
-      const has = existing.includes(value)
-      return {
-        ...prev,
-        [key]: has ? existing.filter((item) => item !== value) : [...existing, value],
-      }
-    })
-  }
-
-  function buildAssistantAnswers(): AssistantQuestionnaireAnswers {
-    const base = emptyAssistantAnswers()
-    ASSISTANT_QUESTIONS.forEach((question) => {
-      const selected = assistantSelections[question.key]
-      const detailFollowUp = assistantFollowUps[question.key].trim()
-      const followUp =
-        question.key === 'travel'
-          ? [
-              travelAirRouting ? `Air travel routing: ${travelAirRouting}` : '',
-              detailFollowUp,
-            ]
-              .filter(Boolean)
-              .join('\n')
-          : detailFollowUp
-      base[question.key] = {
-        selected,
-        followUp,
-      }
-    })
-    return base
-  }
-
-  function needsTravelAirRoutingFollowUp() {
-    const selected = assistantSelections.travel
-    if (selected.length === 0) return false
-    return !selected.includes("I'm not sure yet")
-  }
-
-  function questionIsAnswered(question: AssistantQuestion) {
-    if (question.mode === 'text') {
-      const text = assistantFollowUps[question.key].trim()
-      const selectedShortcut = assistantSelections.specialAttention.some(
-        (item) =>
-          item === 'Nothing needs special attention at this time',
-      )
-      return selectedShortcut || text.length > 0
-    }
-
-    const selected = assistantSelections[question.key]
-    if (selected.length === 0) return false
-
-    if (question.key === 'travel' && needsTravelAirRoutingFollowUp() && !travelAirRouting) {
-      return false
-    }
-
-    const needsDetails = selected.some((item) => {
-      const normalized = item.toLowerCase()
-      return (
-        normalized.includes('let me describe') ||
-        (question.key === 'recreation' && normalized.includes('by person'))
-      )
-    })
-
-    if (!needsDetails) return true
-    return assistantFollowUps[question.key].trim().length > 0
-  }
-
-  function shouldShowFollowUp(question: AssistantQuestion) {
-    if (question.mode === 'text') return false
-    return assistantSelections[question.key].some((item) => {
-      const normalized = item.toLowerCase()
-      return (
-        normalized.includes('let me describe') ||
-        (question.key === 'recreation' && normalized.includes('by person'))
-      )
-    })
-  }
-
-  function followUpCopy(question: AssistantQuestion): { label: string; placeholder: string } {
-    const selected = assistantSelections[question.key]
-    const selectedByPerson = selected.some((item) => item.toLowerCase().includes('by person'))
-    if (question.key === 'recreation' && selectedByPerson) {
-      return {
-        label: 'Who should have separate recreation envelopes?',
-        placeholder: 'Example: Me, Partner, Jordan, Kids',
-      }
-    }
-    return {
-      label: 'Add details',
-      placeholder: 'Add details that should influence your envelope suggestions',
-    }
-  }
-
   function firstNameOrFallback() {
     const first = (nicknameInput || nameInput).trim().split(' ')[0]
     return first ? `${first}'s Curated Budget` : 'My Curated Budget'
@@ -4053,153 +3752,8 @@ function OnboardingWizard({
         setStep(5)
         return
       }
-      if (!questionIsAnswered(currentAssistantQuestion)) {
-        setAssistantError('Please answer this question before continuing.')
-        return
-      }
-
-      const answers = buildAssistantAnswers()
-      onCommit({
-        ...state,
-        assistantSession: {
-          status: 'in_progress',
-          currentQuestion: assistantQuestionIndex + 1,
-          promptVersion: ASSISTANT_PROMPT_VERSION,
-          answers,
-          categories: state.assistantSession?.categories ?? [],
-          summary: assistantSummary,
-          templateName: state.assistantSession?.templateName,
-          updatedAt: new Date().toISOString(),
-        },
-      })
-
-      if (assistantQuestionIndex < ASSISTANT_QUESTIONS.length - 1) {
-        setAssistantQuestionIndex((current) => current + 1)
-        setAssistantError('')
-        return
-      }
-
-      setAssistantBusy(true)
-      setAssistantError('')
-      onCommit({
-        ...state,
-        assistantSession: {
-          status: 'generating',
-          currentQuestion: ASSISTANT_QUESTIONS.length,
-          promptVersion: ASSISTANT_PROMPT_VERSION,
-          answers,
-          categories: state.assistantSession?.categories ?? [],
-          summary: assistantSummary,
-          templateName: state.assistantSession?.templateName,
-          updatedAt: new Date().toISOString(),
-        },
-      })
-
-      try {
-        const universalById = new Map(
-          CATEGORY_SUGGESTIONS.map((item) => [normalizedCategoryId(item.name), item]),
-        )
-        const response = await generateEnvelopeAssistantRecommendation({
-          promptVersion: ASSISTANT_PROMPT_VERSION,
-          universalCategories: CATEGORY_SUGGESTIONS.map((item) => ({
-            id: normalizedCategoryId(item.name),
-            name: item.name,
-            group: item.group.toLowerCase() as 'needs' | 'wants' | 'savings',
-          })),
-          baselineCategoryIds: ESSENTIALS_BASELINE_IDS,
-          answers,
-        })
-
-        const recommendedNames = new Set<string>()
-        const aiCustomSuggestions: CategorySuggestion[] = []
-        const assistantCategories: AssistantCategoryDraft[] = []
-
-        response.categories.forEach((category, index) => {
-          const universalMatch = category.universalCategoryId
-            ? universalById.get(category.universalCategoryId)
-            : null
-          const resolvedName = category.source === 'universal' && universalMatch
-            ? universalMatch.name
-            : category.name
-          const resolvedGroup = category.source === 'universal' && universalMatch
-            ? universalMatch.group
-            : toSuggestionGroup(category.group)
-
-          recommendedNames.add(resolvedName)
-
-          if (category.source === 'custom') {
-            aiCustomSuggestions.push({
-              name: resolvedName,
-              group: resolvedGroup,
-              icon: Tag,
-              templates: [],
-              examples: defaultExamplesForGroup(resolvedGroup),
-            })
-          }
-
-          assistantCategories.push({
-            id: crypto.randomUUID(),
-            universalCategoryId: category.universalCategoryId,
-            customName: category.source === 'custom' ? resolvedName : null,
-            group: category.group,
-            source: category.source === 'custom' ? 'ai_custom' : 'universal_selection',
-            reason: category.reason,
-            answerKeys: category.answerKeys,
-            selected: true,
-            displayOrder: index,
-          })
-        })
-
-        setCustomSuggestions((prev) => {
-          const seen = new Set(prev.map((item) => item.name.toLowerCase()))
-          const additions = aiCustomSuggestions.filter((item) => !seen.has(item.name.toLowerCase()))
-          return [...prev, ...additions]
-        })
-
-        const miscCategory = onboardingSuggestions.find((item) =>
-          MISC_CANDIDATE_NAMES.includes(item.name.trim().toLowerCase()),
-        )
-        const miscName = miscCategory?.name ?? 'Misc'
-        const nextCuratedNames = new Set([...existingNames, ...recommendedNames, miscName])
-        setCuratedNames(nextCuratedNames)
-        setSelectedNames(nextCuratedNames)
-        setAssistantSummary(response.summary)
-        onCommit({
-          ...state,
-          assistantSession: {
-            status: 'ready',
-            currentQuestion: ASSISTANT_QUESTIONS.length,
-            promptVersion: ASSISTANT_PROMPT_VERSION,
-            modelName: response.modelName,
-            answers,
-            categories: assistantCategories,
-            summary: response.summary,
-            templateName: firstNameOrFallback(),
-            updatedAt: new Date().toISOString(),
-          },
-        })
-        setStep(5)
-      } catch (error) {
-        const message = error instanceof Error
-          ? error.message
-          : "Tally couldn't finish your recommendation. Try again or continue with the standard templates."
-        setAssistantError(message)
-        onCommit({
-          ...state,
-          assistantSession: {
-            status: 'failed',
-            currentQuestion: ASSISTANT_QUESTIONS.length,
-            promptVersion: ASSISTANT_PROMPT_VERSION,
-            answers,
-            categories: state.assistantSession?.categories ?? [],
-            summary: assistantSummary,
-            templateName: state.assistantSession?.templateName,
-            updatedAt: new Date().toISOString(),
-          },
-        })
-      } finally {
-        setAssistantBusy(false)
-      }
+      // The 'ai' path is driven entirely by <AdaptiveOnboarding>, which calls
+      // onFinish directly and advances past this shared footer button.
       return
     }
 
@@ -4239,11 +3793,6 @@ function OnboardingWizard({
   }
 
   function goBack() {
-    if (step === 4 && setupMode === 'ai' && assistantQuestionIndex > 0) {
-      setAssistantQuestionIndex((current) => Math.max(0, current - 1))
-      setAssistantError('')
-      return
-    }
     setStep((current) => Math.max(1, current - 1))
   }
 
@@ -4386,197 +3935,137 @@ function OnboardingWizard({
             </section>
           )}
 
-          {step === 4 && (
+          {step === 4 && !setupMode && (
             <section className="onboarding-step wide">
-              {!setupMode && (
-                <>
-                  <p className="eyebrow">Budget setup</p>
-                  <h1>Do you want guidance, or a template to pick from?</h1>
-                  <p className="onboarding-lead">
-                    Choose AI-guided setup for a curated starting point, or use templates and build
-                    manually.
+              <p className="eyebrow">Budget setup</p>
+              <h1>Do you want guidance, or a template to pick from?</h1>
+              <p className="onboarding-lead">
+                Choose AI-guided setup for a curated starting point, or use templates and build
+                manually.
+              </p>
+              <div className="assistant-entry-grid">
+                <article className="assistant-entry-card">
+                  <h2>Build with Tally</h2>
+                  <p>
+                    New to envelope budgeting? Answer a short set of questions and Tally will
+                    create a budget around your lifestyle.
                   </p>
-                  <div className="assistant-entry-grid">
-                    <article className="assistant-entry-card">
-                      <h2>Build with Tally</h2>
-                      <p>
-                        New to envelope budgeting? Answer a short set of questions and Tally will
-                        create a budget around your lifestyle.
-                      </p>
-                      <button
-                        className="primary-action"
-                        onClick={() => {
-                          setSetupMode('ai')
-                          setAssistantQuestionIndex(0)
-                          setAssistantError('')
-                        }}
-                        type="button"
-                      >
-                        Start AI assistant
-                      </button>
-                    </article>
-                    <article className="assistant-entry-card">
-                      <h2>Choose it yourself</h2>
-                      <p>
-                        Already experienced with the envelope system? Select a starter template or
-                        create your budget manually.
-                      </p>
-                      <button
-                        className="outline-action"
-                        onClick={() => {
-                          setSetupMode('manual')
-                          setAssistantError('')
-                        }}
-                        type="button"
-                      >
-                        Use templates or build manually
-                      </button>
-                    </article>
-                  </div>
-                </>
-              )}
-
-              {setupMode === 'manual' && (
-                <div className="assistant-manual-copy">
-                  <p className="eyebrow">Manual setup selected</p>
-                  <h1>Great. We'll take you to template selection next.</h1>
-                  <button className="text-button" onClick={() => setSetupMode(null)} type="button">
-                    <ArrowLeft size={15} /> Switch to AI assistant
+                  <button
+                    className="primary-action"
+                    onClick={() => {
+                      setSetupMode('ai')
+                      setAssistantError('')
+                    }}
+                    type="button"
+                  >
+                    Start AI assistant
                   </button>
-                </div>
-              )}
-
-              {setupMode === 'ai' && (
-                <div className="assistant-question-wrap">
-                  <div className="assistant-question-header">
-                    <p className="eyebrow">Tally's AI Assistant</p>
-                    <strong>
-                      Question {assistantQuestionIndex + 1} of {ASSISTANT_QUESTIONS.length}
-                    </strong>
-                  </div>
-                  <h1>{currentAssistantQuestion.title}</h1>
-                  {currentAssistantQuestion.helperText && (
-                    <p className="assistant-helper-text">{currentAssistantQuestion.helperText}</p>
-                  )}
-                  {currentAssistantQuestion.mode !== 'text' && (
-                    <div className="assistant-option-grid">
-                      {currentAssistantQuestion.options?.map((option) => {
-                        const selected = assistantSelections[currentAssistantQuestion.key].includes(option)
-                        return (
-                          <button
-                            className={selected ? 'selected' : ''}
-                            key={option}
-                            onClick={() => {
-                              if (currentAssistantQuestion.mode === 'single') {
-                                setAssistantSingleAnswer(currentAssistantQuestion.key, option)
-                                return
-                              }
-                              if (
-                                currentAssistantQuestion.key === 'travel' &&
-                                option === "I'm not sure yet"
-                              ) {
-                                setTravelAirRouting('')
-                              }
-                              toggleAssistantMultiAnswer(currentAssistantQuestion.key, option)
-                            }}
-                            type="button"
-                          >
-                            {option}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )}
-
-                  {currentAssistantQuestion.mode === 'text' && (
-                    <div className="assistant-text-question">
-                      <label>
-                        Special-attention spending
-                        <textarea
-                          onChange={(event) =>
-                            setAssistantFollowUps((prev) => ({
-                              ...prev,
-                              specialAttention: event.target.value,
-                            }))
-                          }
-                          placeholder="Tell Tally what you would like to track..."
-                          value={assistantFollowUps.specialAttention}
-                        />
-                      </label>
-                      <label className="assistant-checkbox-row">
-                        <input
-                          checked={assistantSelections.specialAttention.includes(
-                            'Nothing needs special attention at this time',
-                          )}
-                          onChange={(event) => {
-                            if (event.target.checked) {
-                              setAssistantSelections((prev) => ({
-                                ...prev,
-                                specialAttention: ['Nothing needs special attention at this time'],
-                              }))
-                              setAssistantFollowUps((prev) => ({ ...prev, specialAttention: '' }))
-                            } else {
-                              setAssistantSelections((prev) => ({ ...prev, specialAttention: [] }))
-                            }
-                          }}
-                          type="checkbox"
-                        />
-                        Nothing needs special attention at this time
-                      </label>
-                    </div>
-                  )}
-
-                  {currentAssistantQuestion.key === 'travel' &&
-                    currentAssistantQuestion.mode !== 'text' &&
-                    needsTravelAirRoutingFollowUp() && (
-                      <div className="assistant-follow-up-field">
-                        <span>Where should air travel go?</span>
-                        <div className="assistant-option-grid">
-                          {TRAVEL_AIR_ROUTING_OPTIONS.map((option) => {
-                            const selected = travelAirRouting === option
-                            return (
-                              <button
-                                className={selected ? 'selected' : ''}
-                                key={option}
-                                onClick={() => setTravelAirRouting(option)}
-                                type="button"
-                              >
-                                {option}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                  {shouldShowFollowUp(currentAssistantQuestion) && (
-                    <label className="assistant-follow-up-field">
-                      <span>{followUpCopy(currentAssistantQuestion).label}</span>
-                      <textarea
-                        onChange={(event) =>
-                          setAssistantFollowUps((prev) => ({
-                            ...prev,
-                            [currentAssistantQuestion.key]: event.target.value,
-                          }))
-                        }
-                        placeholder={followUpCopy(currentAssistantQuestion).placeholder}
-                        value={assistantFollowUps[currentAssistantQuestion.key]}
-                      />
-                    </label>
-                  )}
-
-                  {assistantSummary && assistantQuestionIndex === ASSISTANT_QUESTIONS.length - 1 && (
-                    <p className="assistant-summary">{assistantSummary}</p>
-                  )}
-                  {assistantError && <p className="form-message">{assistantError}</p>}
-                  <div className="assistant-controls">
-                    <button className="text-button" onClick={() => setSetupMode(null)} type="button">
-                      Restart setup choice
-                    </button>
-                  </div>
-                </div>
-              )}
+                </article>
+                <article className="assistant-entry-card">
+                  <h2>Choose it yourself</h2>
+                  <p>
+                    Already experienced with the envelope system? Select a starter template or
+                    create your budget manually.
+                  </p>
+                  <button
+                    className="outline-action"
+                    onClick={() => {
+                      setSetupMode('manual')
+                      setAssistantError('')
+                    }}
+                    type="button"
+                  >
+                    Use templates or build manually
+                  </button>
+                </article>
+              </div>
+              {assistantError && <p className="form-message">{assistantError}</p>}
             </section>
+          )}
+
+          {step === 4 && setupMode === 'manual' && (
+            <section className="onboarding-step wide">
+              <div className="assistant-manual-copy">
+                <p className="eyebrow">Manual setup selected</p>
+                <h1>Great. We'll take you to template selection next.</h1>
+                <button className="text-button" onClick={() => setSetupMode(null)} type="button">
+                  <ArrowLeft size={15} /> Switch to AI assistant
+                </button>
+              </div>
+            </section>
+          )}
+
+          {step === 4 && setupMode === 'ai' && (
+            <AdaptiveOnboarding
+              initialAnswers={onboardingAnswers}
+              initialSection={onboardingSection}
+              onCancel={() => setSetupMode(null)}
+              onFinish={(envelopes, summary) => {
+                const assistantCategories: AssistantCategoryDraft[] = envelopes.map((item, index) => ({
+                  id: crypto.randomUUID(),
+                  name: item.name,
+                  group: item.group.toLowerCase() as 'needs' | 'wants' | 'savings',
+                  source: item.source === 'freeText' ? 'ai_custom' : 'rule',
+                  reason: item.reason,
+                  answerKeys: [item.source],
+                  selected: true,
+                  displayOrder: index,
+                }))
+                const nextCuratedNames = new Set(envelopes.map((item) => item.name))
+                setCuratedNames(nextCuratedNames)
+                setSelectedNames(new Set([...existingNames, ...nextCuratedNames]))
+
+                const toCreate = envelopes.filter((item) => !existingNames.has(item.name))
+                const newCategories: BudgetCategory[] = toCreate.map((item) => ({
+                  id: crypto.randomUUID(),
+                  name: item.name,
+                  group: item.group,
+                  monthlyTarget: 0,
+                  openingBalance: 0,
+                  warningThreshold: 80,
+                  archived: false,
+                }))
+
+                onCommit(
+                  {
+                    ...state,
+                    categories: [...state.categories, ...newCategories],
+                    assistantSession: {
+                      status: 'ready',
+                      currentSection: onboardingSection,
+                      promptVersion: ASSISTANT_PROMPT_VERSION,
+                      answers: onboardingAnswers,
+                      categories: assistantCategories,
+                      summary,
+                      templateName: firstNameOrFallback(),
+                      updatedAt: new Date().toISOString(),
+                    },
+                  },
+                  audit(
+                    'Adaptive onboarding completed',
+                    `Built ${envelopes.length} envelopes from your answers.`,
+                  ),
+                )
+                setStep(6)
+              }}
+              onProgress={(answers, section) => {
+                setOnboardingAnswers(answers)
+                setOnboardingSection(section)
+                onCommit({
+                  ...state,
+                  assistantSession: {
+                    status: 'in_progress',
+                    currentSection: section,
+                    promptVersion: ASSISTANT_PROMPT_VERSION,
+                    answers,
+                    categories: state.assistantSession?.categories ?? [],
+                    summary: state.assistantSession?.summary,
+                    templateName: state.assistantSession?.templateName,
+                    updatedAt: new Date().toISOString(),
+                  },
+                })
+              }}
+            />
           )}
 
           {step === 5 && (
@@ -5011,20 +4500,22 @@ function OnboardingWizard({
           )}
         </div>
 
-        <footer className="onboarding-footer">
-          <button className="outline-action" disabled={step === 1} onClick={goBack} type="button">
-            <ArrowLeft size={16} /> Back
-          </button>
-          {step < ONBOARDING_STEPS ? (
-            <button className="primary-action" disabled={assistantBusy} onClick={() => void goNext()} type="button">
-              {assistantBusy ? 'Generating...' : 'Continue'} <ArrowRight size={16} />
+        {!(step === 4 && setupMode === 'ai') && (
+          <footer className="onboarding-footer">
+            <button className="outline-action" disabled={step === 1} onClick={goBack} type="button">
+              <ArrowLeft size={16} /> Back
             </button>
-          ) : (
-            <button className="primary-action" onClick={onFinish} type="button">
-              <Check size={17} /> Finish setup
-            </button>
-          )}
-        </footer>
+            {step < ONBOARDING_STEPS ? (
+              <button className="primary-action" onClick={() => void goNext()} type="button">
+                Continue <ArrowRight size={16} />
+              </button>
+            ) : (
+              <button className="primary-action" onClick={onFinish} type="button">
+                <Check size={17} /> Finish setup
+              </button>
+            )}
+          </footer>
+        )}
       </div>
     </div>
   )

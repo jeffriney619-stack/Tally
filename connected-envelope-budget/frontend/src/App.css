@@ -2319,6 +2319,18 @@ tr.over .row-progress-fill {
 .envelope-tile.savings svg {
   color: #76530c;
 }
+.envelope-tile.selected {
+  border-color: var(--forest);
+  background: var(--needs-soft);
+}
+.envelope-tile.wants.selected {
+  border-color: var(--wants);
+  background: var(--wants-soft);
+}
+.envelope-tile.savings.selected {
+  border-color: var(--savings);
+  background: var(--savings-soft);
+}
 .manual-controls {
   display: flex;
   gap: 10px;
@@ -3952,6 +3964,188 @@ tr.over .row-progress-fill {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+}
+/* ---------- adaptive budget onboarding ---------- */
+.adaptive-onboarding {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 32px;
+  align-items: start;
+  width: min(100%, 1080px);
+}
+.adaptive-main {
+  min-width: 0;
+}
+.adaptive-main .onboarding-step.wide {
+  width: 100%;
+}
+.adaptive-live-panel {
+  position: sticky;
+  top: 24px;
+  display: grid;
+  gap: 10px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #f6f8f6;
+  box-shadow: 0 8px 20px -14px rgba(20, 40, 30, 0.35);
+}
+.adaptive-live-panel h2 {
+  margin: 0;
+  font-family: "Newsreader", serif;
+  font-size: 1.15rem;
+  color: var(--forest);
+}
+.adaptive-live-panel ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+.adaptive-live-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.adaptive-live-reassurance {
+  margin: 4px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+.adaptive-review-section {
+  padding: 18px 20px 20px;
+  margin-bottom: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fbfcfb;
+}
+.adaptive-review-section.needs {
+  border-top: 4px solid var(--needs);
+}
+.adaptive-review-section.wants {
+  border-top: 4px solid var(--wants);
+}
+.adaptive-review-section.savings {
+  border-top: 4px solid var(--savings);
+}
+.adaptive-review-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.adaptive-review-section-header small {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+.adaptive-review-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.adaptive-review-card {
+  display: grid;
+  gap: 7px;
+  align-content: start;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 4px 14px -12px rgba(20, 40, 30, 0.4);
+  transition: box-shadow 150ms ease, transform 150ms ease;
+}
+.adaptive-review-card:hover {
+  box-shadow: 0 8px 18px -12px rgba(20, 40, 30, 0.45);
+  transform: translateY(-1px);
+}
+.adaptive-review-card.needs {
+  border-left: 3px solid var(--needs);
+}
+.adaptive-review-card.wants {
+  border-left: 3px solid var(--wants);
+}
+.adaptive-review-card.savings {
+  border-left: 3px solid var(--savings);
+}
+.adaptive-review-card.removed {
+  opacity: 0.5;
+  box-shadow: none;
+}
+.adaptive-review-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.adaptive-review-card-header input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 700;
+}
+.adaptive-review-card-header button {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+}
+.adaptive-review-reason {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+.adaptive-review-boundary {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+/* Scoped override: a later, unrelated `.envelope-grid` rule (used by the
+   onboarding-intro preview) forces 2 wide columns. Beat it here with a
+   descendant selector so the boundary test gets a dense tile grid instead. */
+.adaptive-onboarding .envelope-grid {
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 7px;
+}
+.adaptive-onboarding .envelope-tile {
+  gap: 4px;
+  padding: 8px 5px;
+  min-height: 58px;
+  font-size: 0.62rem;
+  border-radius: 6px;
+}
+.adaptive-onboarding .envelope-tile svg {
+  width: 15px;
+  height: 15px;
+}
+.adaptive-boundary-forward-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+@media (max-width: 900px) {
+  .adaptive-onboarding {
+    grid-template-columns: 1fr;
+  }
+  .adaptive-live-panel {
+    position: static;
+    order: -1;
+  }
 }
 .created-for-you {
   color: #325469;

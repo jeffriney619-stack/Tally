@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tally Envelope Assistant - Questions and Default Categories</title>
+  <style>
+    :root {
+      --ink: #1f2a24;
+      --muted: #5c6962;
+      --line: #d8dfd8;
+      --card: #ffffff;
+      --bg: #f4f7f3;
+      --needs: #5f9f8a;
+      --wants: #c8866b;
+      --savings: #7d93bf;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      background: var(--bg);
+      color: var(--ink);
+      font: 15px/1.45 "Segoe UI", Arial, sans-serif;
+    }
+
+    .page {
+      max-width: 980px;
+      margin: 0 auto;
+      display: grid;
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+    }
+
+    h1, h2, h3 { margin: 0 0 10px; }
+    h1 { font-size: 1.5rem; }
+    h2 { font-size: 1.15rem; margin-top: 6px; }
+    h3 { font-size: 1rem; }
+
+    p, li { color: var(--ink); }
+    .muted { color: var(--muted); }
+
+    .meta {
+      display: grid;
+      gap: 4px;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .tag {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #eef2ed;
+      color: #3d4b44;
+      font-size: 0.76rem;
+      font-weight: 600;
+      vertical-align: middle;
+    }
+
+    .group-needs { border-left: 4px solid var(--needs); padding-left: 10px; }
+    .group-wants { border-left: 4px solid var(--wants); padding-left: 10px; }
+    .group-savings { border-left: 4px solid var(--savings); padding-left: 10px; }
+
+    ol { margin: 0; padding-left: 20px; }
+    ul { margin: 6px 0 0; padding-left: 20px; }
+
+    .question {
+      margin: 12px 0;
+      padding-top: 10px;
+      border-top: 1px dashed var(--line);
+    }
+
+    .question:first-of-type {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: 0;
+    }
+
+    .cols {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    @media (max-width: 760px) {
+      body { padding: 14px; }
+      .cols { grid-template-columns: 1fr; }
+    }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .card { border: 1px solid #cfcfcf; break-inside: avoid; }
+      a { color: inherit; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="card">
+      <h1>Tally Envelope Assistant: Questions and Default Categories</h1>
+      <div class="meta">
+        <div>Prompt version: envelope-assistant-v1</div>
+        <div>Source: frontend/src/App.tsx</div>
+      </div>
+      <p class="muted">This is a direct print-friendly reference of the current assistant questionnaire and default category templates used in setup.</p>
+    </section>
+
+    <section class="card">
+      <h2>Assistant Questions and Answer Choices</h2>
+
+      <div class="question">
+        <h3>1) How do you naturally organize recreational spending? <span class="tag">single</span></h3>
+        <ul>
+          <li>By person: my spending, partner spending, or children</li>
+          <li>By who I am with: friends, date nights, or family activities</li>
+          <li>By activity: golf, fitness, gaming, crafts, or another hobby</li>
+          <li>By broad category: entertainment, dining, or shopping</li>
+          <li>Mostly one category: fun money</li>
+          <li>I'm not sure yet</li>
+          <li>Let me describe how I view recreation expenses</li>
+        </ul>
+      </div>
+
+      <div class="question">
+        <h3>2) How would you organize food and drink purchases? <span class="tag">single</span></h3>
+        <ul>
+          <li>One category for everything</li>
+          <li>Groceries and Dining</li>
+          <li>Groceries, Dining, and Date Nights</li>
+          <li>Groceries plus Kitchen Extras</li>
+          <li>By purpose: Everyday Food, Health and Nutrition, and Social Dining</li>
+          <li>I'm not sure yet</li>
+          <li>Let me describe how I view food expenses</li>
+        </ul>
+      </div>
+
+      <div class="question">
+        <h3>3) How do you think about travel expenses? <span class="tag">multi</span></h3>
+        <p class="muted">Helper text: Select all that apply.</p>
+        <ul>
+          <li>Keep trips/vacation separate from everyday transportation</li>
+          <li>Treat local transportation as one envelope (gas, rideshare, public transit, bikes)</li>
+          <li>Split transportation into Car and Non-car transportation</li>
+          <li>Use separate envelopes for Work Travel and Personal Trips/Vacation</li>
+          <li>Use one envelope for all travel and transportation</li>
+          <li>I'm not sure yet</li>
+          <li>Let me describe how I view travel expenses</li>
+        </ul>
+        <p class="muted">Follow-up routing options:</p>
+        <ul>
+          <li>Air travel should qualify as trips/vacation</li>
+          <li>Air travel should be a transportation cost, unless it was for a trips/vacation</li>
+        </ul>
+      </div>
+
+      <div class="question">
+        <h3>4) How do you think about car expenses? <span class="tag">single</span></h3>
+        <ul>
+          <li>Gas and car maintenance are separate</li>
+          <li>Everything in one</li>
+          <li>Gas as its own, and car maintenance typically covered by an emergency fund contribution</li>
+          <li>Gas, maintenance, and insurance should be separate</li>
+          <li>Gas and transportation can stay together, but maintenance should be separate</li>
+          <li>I'm not sure yet</li>
+          <li>Let me describe how I view car expenses</li>
+        </ul>
+      </div>
+
+      <div class="question">
+        <h3>5) Do you budget for donations or charities? <span class="tag">single</span></h3>
+        <ul>
+          <li>Yes</li>
+          <li>No</li>
+          <li>I'm not sure yet</li>
+          <li>Let me describe how I view donation expenses</li>
+        </ul>
+      </div>
+
+      <div class="question">
+        <h3>6) Should eating out be considered a recreational, date, or social purchase, or be considered food? <span class="tag">single</span></h3>
+        <ul>
+          <li>Treat eating out as food with Dining</li>
+          <li>Treat date and social meals as recreation, separate from routine food spending</li>
+          <li>I'm not sure yet</li>
+          <li>Let me describe how I view eating-out expenses</li>
+        </ul>
+      </div>
+
+      <div class="question">
+        <h3>7) Do you have a pet? If so, how do you think about vet bills, food, and recreational spending on the pet? <span class="tag">single</span></h3>
+        <ul>
+          <li>I don't own a pet</li>
+          <li>One Pet Care envelope for all pet expenses</li>
+          <li>Separate Vet Care from routine pet food and supplies</li>
+          <li>Separate Vet Care, Pet Food, and Pet Fun spending</li>
+          <li>I'm not sure yet</li>
+          <li>Let me describe how I view pet expenses</li>
+        </ul>
+      </div>
+
+      <div class="question">
+        <h3>8) Outside of utilities, how would you organize spending on your home (repairs, furniture, decor, etc.)? <span class="tag">single</span></h3>
+        <ul>
+          <li>Keep repairs, furniture, and decor in one Home envelope</li>
+          <li>Separate Home Repairs from Furniture/Decor</li>
+          <li>Separate routine Home Maintenance from larger Home Projects</li>
+          <li>Use separate envelopes for Indoor and Outdoor home projects</li>
+          <li>I do not need dedicated home envelopes right now</li>
+          <li>I'm not sure yet</li>
+          <li>Let me describe how I view home expenses</li>
+        </ul>
+      </div>
+
+      <div class="question">
+        <h3>9) How do you currently think about saving money? <span class="tag">single</span></h3>
+        <ul>
+          <li>I am building an emergency fund and saving additional money on top of it</li>
+          <li>I try to spend a certain percentage below my means and save whatever remains</li>
+          <li>I am saving toward one specific goal</li>
+          <li>I divide my savings among several different goals</li>
+          <li>I am not actively saving yet</li>
+          <li>I'm not sure yet</li>
+          <li>Let me describe how I view savings expenses</li>
+        </ul>
+      </div>
+
+      <div class="question">
+        <h3>10) Is there one type of spending you make frequently, want to track individually, or want to be especially careful not to overspend on? <span class="tag">text</span></h3>
+        <p class="muted">Free-text response.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Default Envelope Categories</h2>
+      <p class="muted">The assistant request includes a universal catalog, then applies template defaults and AI selection logic.</p>
+
+      <div class="cols">
+        <div class="group-needs">
+          <h3>Essentials Baseline (always seeded by baseline IDs)</h3>
+          <ol>
+            <li>Rent/Mortgage (Needs)</li>
+            <li>Groceries (Needs)</li>
+            <li>Transportation (Needs)</li>
+            <li>Insurance (Needs)</li>
+            <li>Utilities (Needs)</li>
+            <li>Emergency fund (Savings)</li>
+          </ol>
+        </div>
+
+        <div class="group-wants">
+          <h3>Full Template Adds</h3>
+          <ol>
+            <li>Dining (Wants)</li>
+            <li>Shopping (Wants)</li>
+            <li>Entertainment (Wants)</li>
+            <li>Subscriptions (Wants)</li>
+            <li>Vacation (Wants)</li>
+            <li>Date night (Wants)</li>
+            <li>Recreation (Wants)</li>
+            <li>Long-term goals (Savings)</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="group-savings" style="margin-top: 14px;">
+        <h3>Universal Catalog (available to AI and manual selection)</h3>
+        <p><strong>Needs:</strong> Rent/Mortgage, Groceries, Transportation, Insurance, Utilities</p>
+        <p><strong>Wants:</strong> Dining, Shopping, Entertainment, Subscriptions, Pets, Vacation, Date night, Recreation, Misc</p>
+        <p><strong>Savings:</strong> Emergency fund, Long-term goals</p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

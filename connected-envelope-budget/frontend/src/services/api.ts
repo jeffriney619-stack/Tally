@@ -1,8 +1,8 @@
 import type {
-  AssistantQuestionnaireAnswers,
   BudgetCategory,
   BudgetSetup,
   BudgetTransaction,
+  OnboardingAnswers,
   PrototypeState,
 } from '../types/budget'
 
@@ -189,7 +189,7 @@ export type EnvelopeAssistantRequest = {
   promptVersion: string
   universalCategories: Array<{ id: string; name: string; group: 'needs' | 'wants' | 'savings' }>
   baselineCategoryIds: string[]
-  answers: AssistantQuestionnaireAnswers
+  answers: OnboardingAnswers
 }
 
 export type EnvelopeAssistantResponse = {
@@ -217,7 +217,8 @@ export async function generateEnvelopeAssistantRecommendation(
   })
 
   if (!response.ok) {
-    let detail = "Tally couldn't finish your recommendation. Try again or continue with the standard templates."
+    let detail =
+      "Tally couldn't finish your recommendation. Try again or continue with the standard templates."
     try {
       const problem = (await response.json()) as { detail?: string }
       if (problem.detail) detail = problem.detail
