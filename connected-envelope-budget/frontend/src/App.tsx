@@ -1934,8 +1934,7 @@ function EnvelopeGroupedTable({
             {isForecastMonth ? 'Forecast contributions' : 'Progress'}
           </th>
           {isForecastMonth && <th className="num">Spread transactions</th>}
-          <th className="num">{isForecastMonth ? 'Forecast available' : 'Available'}</th>
-          <th>Status</th>
+          <th className="num">{isForecastMonth ? 'Forecast envelope balance' : 'Envelope balance'}</th>
         </tr>
       </thead>
       {GROUP_ORDER.map((group) => {
@@ -1997,31 +1996,20 @@ function EnvelopeGroupedTable({
         return (
           <tbody className={group.toLowerCase()} key={group}>
             <tr className="group-header-row">
-              <td colSpan={isForecastMonth ? 5 : 4}>
-                <div className="group-header-content">
+              <td colSpan={isForecastMonth ? 4 : 3}>
+                <div
+                  className={`group-header-content ${isForecastMonth ? 'forecast-cols' : 'current-cols'}`}
+                  aria-label="Column titles"
+                >
                   <span className="group-name">
-                    <i /> {group} · {rows.length} {rows.length === 1 ? 'category' : 'categories'}
+                    {group} · {rows.length} {rows.length === 1 ? 'category' : 'categories'}
                   </span>
-                  <span className="group-col-legend" aria-label="Column titles">
-                    <span title="Category">
-                      <Tag size={11} />
-                    </span>
-                    <span title={isForecastMonth ? 'Contributions' : 'Progress'}>
-                      {isForecastMonth ? <Repeat size={11} /> : <TrendingUp size={11} />}
-                    </span>
-                    {isForecastMonth && (
-                      <span title="Spread commitments">
-                        <ArrowLeftRight size={11} />
-                      </span>
-                    )}
-                    <span title={isForecastMonth ? 'Forecast available' : 'Available'}>
-                      <CircleDollarSign size={11} />
-                    </span>
-                    {!isForecastMonth && (
-                      <span title="Status">
-                        <ShieldCheck size={11} />
-                      </span>
-                    )}
+                  <span className="group-col-title">
+                    {isForecastMonth ? 'Forecast contributions' : 'Progress'}
+                  </span>
+                  {isForecastMonth && <span className="group-col-title num">Spread transactions</span>}
+                  <span className="group-col-title num">
+                    {isForecastMonth ? 'Forecast envelope balance' : 'Envelope balance'}
                   </span>
                 </div>
               </td>
@@ -2046,7 +2034,6 @@ function EnvelopeGroupedTable({
                 onClick={isForecastMonth ? undefined : () => onSelectCategory(category.id)}
               >
                 <td>
-                  <span className="mobile-col-title">Category</span>
                   <div className="cat-name-cell">
                     <div>
                       <strong>{category.name}</strong>
@@ -2060,18 +2047,24 @@ function EnvelopeGroupedTable({
                   </div>
                 </td>
                 <td className="cell-progress">
-                  <span className="mobile-col-title">{isForecastMonth ? 'Contrib' : 'Progress'}</span>
                   {isForecastMonth ? (
-                    <div className="forecast-projection-note">
-                      <strong>{money(forecastContribution)}</strong>
-                      <span>
-                        recurring contributions added over {forecastMonthsAhead}{' '}
-                        month{forecastMonthsAhead === 1 ? '' : 's'}
-                        {spreadFutureImpact > 0
-                          ? `, minus ${money(spreadFutureImpact)} from spread transactions`
-                          : ''}
-                      </span>
-                    </div>
+                    isRentMortgage ? (
+                      <div className="forecast-projection-note">
+                        <strong>---</strong>
+                        <span>Not tracked for forecasted rent/mortgage</span>
+                      </div>
+                    ) : (
+                      <div className="forecast-projection-note">
+                        <strong>{money(forecastContribution)}</strong>
+                        <span>
+                          recurring contributions added over {forecastMonthsAhead}{' '}
+                          month{forecastMonthsAhead === 1 ? '' : 's'}
+                          {spreadFutureImpact > 0
+                            ? `, minus ${money(spreadFutureImpact)} from spread transactions`
+                            : ''}
+                        </span>
+                      </div>
+                    )
                   ) : isSavings ? (
                     <div className="row-progress-meta">
                       <span>{money(effectiveTarget)} auto-funded monthly (non-transactional)</span>
@@ -2117,11 +2110,18 @@ function EnvelopeGroupedTable({
                 </td>
                 {isForecastMonth && (
                   <td className="num">
-                    <span className="mobile-col-title">Spread</span>
                     <div className="available-amount-cell">
-                      <strong>{spreadFutureImpact > 0 ? money(spreadFutureImpact) : '—'}</strong>
+                      <strong>
+                        {isRentMortgage
+                          ? '---'
+                          : spreadFutureImpact > 0
+                            ? money(spreadFutureImpact)
+                            : '—'}
+                      </strong>
                       <small>
-                        {spreadFutureImpact > 0
+                        {isRentMortgage
+                          ? 'Not tracked in forecast'
+                          : spreadFutureImpact > 0
                           ? 'Projected from spread'
                           : 'No spread commitments'}
                       </small>
@@ -2129,33 +2129,16 @@ function EnvelopeGroupedTable({
                   </td>
                 )}
                 <td className="num" style={available < 0 ? { color: '#923d2d' } : undefined}>
-                  <span className="mobile-col-title">{isForecastMonth ? 'Forecast available' : 'Available'}</span>
                   <div className="available-amount-cell">
-                    <strong>{money(available)}</strong>
-                    <small>{isForecastMonth ? 'Forecast available' : 'Available now'}</small>
+                    <strong>{isForecastMonth && isRentMortgage ? '---' : money(available)}</strong>
+                    <small>
+                      {isForecastMonth
+                        ? isRentMortgage
+                          ? 'Not tracked in forecast'
+                          : 'Forecast envelope balance'
+                        : 'Envelope balance'}
+                    </small>
                   </div>
-                </td>
-                <td>
-                  <span className="mobile-col-title">Status</span>
-                  {isForecastMonth ? (
-                    <span className={`status-pill ${available < 0 ? 'over' : 'healthy'}`}>Forecast</span>
-                  ) : isSavings ? (
-                    <span className="status-pill healthy">Auto-funded</span>
-                  ) : isRentMortgage ? (
-                    <div className="obligation-status-wrap">
-                      <span className={`status-pill ${rentPayment ? 'healthy' : ''}`}>
-                        {rentPayment ? 'Paid' : 'Not Paid'}
-                      </span>
-                    </div>
-                  ) : (
-                    <span className={`status-pill ${status}`}>
-                      {status === 'over'
-                        ? 'Over limit'
-                        : status === 'near'
-                          ? 'Near limit'
-                          : 'On track'}
-                    </span>
-                  )}
                 </td>
               </tr>
             ),
