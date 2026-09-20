@@ -784,6 +784,9 @@ button {
   vertical-align: middle;
   font-size: 0.79rem;
 }
+.mobile-col-title {
+  display: none;
+}
 .category-table tr.archived {
   opacity: 0.55;
 }
@@ -1032,6 +1035,17 @@ tr.over .row-progress-fill {
   font-weight: 600;
   text-transform: none;
   letter-spacing: 0;
+}
+.group-col-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #486356;
+}
+.group-col-legend > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .needs .group-header-row td {
   background: var(--needs-soft);
@@ -1416,6 +1430,16 @@ tr.over .row-progress-fill {
   .category-table td.num {
     text-align: left;
   }
+  .mobile-col-title {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--muted);
+    font-size: 0.56rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    line-height: 1.1;
+  }
   .cell-progress {
     min-width: 0;
     margin-top: 8px;
@@ -1423,7 +1447,7 @@ tr.over .row-progress-fill {
 
   .category-table:not(.editable-table):not(.forecast-table) tbody tr:not(.group-header-row) {
     display: grid;
-    grid-template-columns: minmax(130px, 1.1fr) minmax(105px, 1fr) minmax(86px, auto) minmax(78px, auto);
+    grid-template-columns: minmax(124px, 1.15fr) minmax(90px, auto) minmax(98px, auto) minmax(62px, auto);
     align-items: center;
     gap: 8px;
     padding: 8px 10px;
@@ -1468,6 +1492,85 @@ tr.over .row-progress-fill {
   .category-table:not(.editable-table):not(.forecast-table) .status-pill {
     font-size: 0.56rem;
     padding: 3px 6px;
+  }
+
+  .forecast-table tbody tr:not(.group-header-row) {
+    display: grid;
+    grid-template-columns: minmax(112px, 1.15fr) minmax(72px, auto) minmax(52px, auto) minmax(106px, auto);
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .forecast-table tbody tr:not(.group-header-row) > td {
+    margin: 0;
+    padding: 0;
+  }
+
+  .forecast-table .cat-name-cell {
+    margin-left: 0;
+    padding-left: 8px;
+  }
+
+  .forecast-table .forecast-projection-note {
+    justify-items: start;
+    text-align: left;
+    gap: 1px;
+  }
+
+  .forecast-table .forecast-projection-note strong {
+    font-size: 1rem;
+    white-space: nowrap;
+  }
+
+  .forecast-table .forecast-projection-note span,
+  .forecast-table .available-amount-cell small {
+    display: none;
+  }
+
+  .forecast-table .mobile-col-title {
+    margin-bottom: 1px;
+  }
+
+  .forecast-table .available-amount-cell strong {
+    font-size: 0.95rem;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .forecast-table tbody tr:not(.group-header-row) > td:last-child {
+    display: none;
+  }
+
+  .forecast-table .status-pill {
+    font-size: 0.56rem;
+    padding: 3px 6px;
+  }
+}
+
+@media (max-width: 580px) {
+  .group-col-legend {
+    gap: 8px;
+  }
+
+  .forecast-table tbody tr:not(.group-header-row) {
+    grid-template-columns: minmax(96px, 1.1fr) minmax(64px, auto) minmax(44px, auto) minmax(96px, auto);
+    gap: 6px;
+    padding: 7px 8px;
+  }
+
+  .category-table:not(.editable-table):not(.forecast-table) tbody tr:not(.group-header-row) {
+    grid-template-columns: minmax(112px, 1.15fr) minmax(76px, auto) minmax(88px, auto) minmax(56px, auto);
+  }
+
+  .forecast-table .cat-name-cell strong {
+    font-size: 0.82rem;
+    line-height: 1.15;
+  }
+
+  .forecast-table .forecast-projection-note strong,
+  .forecast-table .available-amount-cell strong {
+    font-size: 0.86rem;
   }
 }
 

@@ -2002,6 +2002,27 @@ function EnvelopeGroupedTable({
                   <span className="group-name">
                     <i /> {group} · {rows.length} {rows.length === 1 ? 'category' : 'categories'}
                   </span>
+                  <span className="group-col-legend" aria-label="Column titles">
+                    <span title="Category">
+                      <Tag size={11} />
+                    </span>
+                    <span title={isForecastMonth ? 'Contributions' : 'Progress'}>
+                      {isForecastMonth ? <Repeat size={11} /> : <TrendingUp size={11} />}
+                    </span>
+                    {isForecastMonth && (
+                      <span title="Spread commitments">
+                        <ArrowLeftRight size={11} />
+                      </span>
+                    )}
+                    <span title={isForecastMonth ? 'Forecast available' : 'Available'}>
+                      <CircleDollarSign size={11} />
+                    </span>
+                    {!isForecastMonth && (
+                      <span title="Status">
+                        <ShieldCheck size={11} />
+                      </span>
+                    )}
+                  </span>
                 </div>
               </td>
             </tr>
@@ -2025,6 +2046,7 @@ function EnvelopeGroupedTable({
                 onClick={isForecastMonth ? undefined : () => onSelectCategory(category.id)}
               >
                 <td>
+                  <span className="mobile-col-title">Category</span>
                   <div className="cat-name-cell">
                     <div>
                       <strong>{category.name}</strong>
@@ -2038,6 +2060,7 @@ function EnvelopeGroupedTable({
                   </div>
                 </td>
                 <td className="cell-progress">
+                  <span className="mobile-col-title">{isForecastMonth ? 'Contrib' : 'Progress'}</span>
                   {isForecastMonth ? (
                     <div className="forecast-projection-note">
                       <strong>{money(forecastContribution)}</strong>
@@ -2094,6 +2117,7 @@ function EnvelopeGroupedTable({
                 </td>
                 {isForecastMonth && (
                   <td className="num">
+                    <span className="mobile-col-title">Spread</span>
                     <div className="available-amount-cell">
                       <strong>{spreadFutureImpact > 0 ? money(spreadFutureImpact) : '—'}</strong>
                       <small>
@@ -2105,12 +2129,14 @@ function EnvelopeGroupedTable({
                   </td>
                 )}
                 <td className="num" style={available < 0 ? { color: '#923d2d' } : undefined}>
+                  <span className="mobile-col-title">{isForecastMonth ? 'Forecast available' : 'Available'}</span>
                   <div className="available-amount-cell">
                     <strong>{money(available)}</strong>
                     <small>{isForecastMonth ? 'Forecast available' : 'Available now'}</small>
                   </div>
                 </td>
                 <td>
+                  <span className="mobile-col-title">Status</span>
                   {isForecastMonth ? (
                     <span className={`status-pill ${available < 0 ? 'over' : 'healthy'}`}>Forecast</span>
                   ) : isSavings ? (
