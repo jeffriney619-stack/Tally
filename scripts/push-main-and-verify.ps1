@@ -101,7 +101,7 @@ if (-not $SkipHealthChecks) {
 
     Write-Step "Checking frontend reachability: $FrontendUrl"
     try {
-        $frontend = Invoke-WebRequest -Method Get -Uri $FrontendUrl -TimeoutSec 20 -MaximumRedirection 5
+        $frontend = Invoke-WebRequest -Method Get -Uri $FrontendUrl -TimeoutSec 20 -MaximumRedirection 5 -UseBasicParsing
         Write-Step "Frontend HTTP status: $($frontend.StatusCode)"
     } catch {
         Write-Warning "Frontend check failed: $($_.Exception.Message)"
