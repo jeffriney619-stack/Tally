@@ -48,7 +48,7 @@ import {
   X,
   Zap,
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { type FormEvent, useEffect, useRef, useState } from 'react'
 import './App.css'
 import exampleTransactionsRaw from './data/example_transactions.json'
 import moneyPlantLogo from './assets/money-plant.png'
@@ -1828,6 +1828,12 @@ function Dashboard({
               ? 'Current contribution totals across your active envelopes'
               : 'Editable from Settings'}
           </small>
+          {!isForecastMonth && (
+            <div className="income-contribution-chip">
+              <span>Envelope contributions</span>
+              <strong>{money(totalBudgeted)}</strong>
+            </div>
+          )}
           {!isForecastMonth && adHocIncome > 0 && (
             <div className="ad-hoc-chip">+ {money(adHocIncome)} ad hoc income</div>
           )}
@@ -1931,7 +1937,7 @@ function EnvelopeGroupedTable({
         <tr>
           <th>Category</th>
           <th className="cell-progress">
-            {isForecastMonth ? 'Forecast contributions' : 'Progress'}
+            {isForecastMonth ? 'Forecast contributions' : 'Spent vs contribution'}
           </th>
           {isForecastMonth && <th className="num">Spread transactions</th>}
           <th className="num">{isForecastMonth ? 'Forecast envelope balance' : 'Envelope balance'}</th>
@@ -1975,9 +1981,7 @@ function EnvelopeGroupedTable({
               ? (rentPayment ? 'paid' : 'not-paid')
               : available < 0
                 ? 'over'
-                : usage >= category.warningThreshold
-                  ? 'near'
-                  : 'healthy'
+                : 'healthy'
             return {
               category,
               forecastContribution,
@@ -2005,7 +2009,7 @@ function EnvelopeGroupedTable({
                     {group} · {rows.length} {rows.length === 1 ? 'category' : 'categories'}
                   </span>
                   <span className="group-col-title">
-                    {isForecastMonth ? 'Forecast contributions' : 'Progress'}
+                    {isForecastMonth ? 'Forecast contributions' : 'Spent vs contribution'}
                   </span>
                   {isForecastMonth && <span className="group-col-title num">Spread transactions</span>}
                   <span className="group-col-title num">
@@ -2067,7 +2071,7 @@ function EnvelopeGroupedTable({
                     )
                   ) : isSavings ? (
                     <div className="row-progress-meta">
-                      <span>{money(effectiveTarget)} auto-funded monthly (non-transactional)</span>
+                      <span>{money(effectiveTarget)} auto-funded</span>
                     </div>
                   ) : isRentMortgage ? (
                     <div className="obligation-progress" onClick={(event) => event.stopPropagation()}>
@@ -2087,11 +2091,6 @@ function EnvelopeGroupedTable({
                           Paid
                         </button>
                       </div>
-                      <div className="row-progress-meta obligation-meta">
-                        <span>
-                          {rentPayment ? `${money(effectiveTarget)} paid` : `${money(effectiveTarget)} reserved`}
-                        </span>
-                      </div>
                     </div>
                   ) : (
                     <>
@@ -2100,10 +2099,9 @@ function EnvelopeGroupedTable({
                           className="row-progress-fill"
                           style={{ width: `${Math.min(100, usage)}%` }}
                         />
-                        <span className="row-progress-pct">{Math.round(usage)}%</span>
                       </div>
                       <div className="row-progress-meta">
-                        <span>{money(spent)} / {money(effectiveTarget)}</span>
+                        <span>{money(spent)}/{money(effectiveTarget)} spent</span>
                       </div>
                     </>
                   )}
@@ -3322,6 +3320,8 @@ const INTRO_PAGES = [
   'clean-slate',
 ] as const
 
+const INTRO_AUTOPLAY_MS = 6200
+
 function OnboardingIntroduction({
   onComplete,
   onSkip,
@@ -3330,15 +3330,30 @@ function OnboardingIntroduction({
   onSkip: () => void
 }) {
   const [pageIndex, setPageIndex] = useState(0)
+  const [autoPlayEnabled, setAutoPlayEnabled] = useState(true)
   const page = INTRO_PAGES[pageIndex]
   const isFirst = pageIndex === 0
   const isLast = pageIndex === INTRO_PAGES.length - 1
 
+  useEffect(() => {
+    if (!autoPlayEnabled || isLast) {
+      return
+    }
+
+    const timer = window.setTimeout(() => {
+      setPageIndex((current) => Math.min(INTRO_PAGES.length - 1, current + 1))
+    }, INTRO_AUTOPLAY_MS)
+
+    return () => window.clearTimeout(timer)
+  }, [autoPlayEnabled, isLast, pageIndex])
+
   function goBack() {
+    setAutoPlayEnabled(false)
     setPageIndex((current) => Math.max(0, current - 1))
   }
 
   function goNext() {
+    setAutoPlayEnabled(false)
     if (isLast) {
       onComplete()
       return
@@ -3353,12 +3368,25 @@ function OnboardingIntroduction({
           <div className="intro-brand">
             <img alt="Tally logo" className="brand-logo intro-logo" src={moneyPlantLogo} /> Tally
           </div>
-          <button className="text-button" onClick={onSkip} type="button">
-            Skip introduction
-          </button>
+          <div className="intro-header-actions">
+            <span className="intro-tour-state" aria-live="polite">
+              {autoPlayEnabled && !isLast ? 'Auto-playing preview' : 'Manual preview'}
+            </span>
+            <button
+              className="text-button"
+              onClick={() => setAutoPlayEnabled((current) => !current)}
+              type="button"
+            >
+              {autoPlayEnabled ? 'Pause auto-play' : 'Resume auto-play'}
+            </button>
+            <button className="text-button" onClick={onSkip} type="button">
+              Skip introduction
+            </button>
+          </div>
         </header>
 
         <section className="intro-page">
+          <div className="intro-scene" key={page}>
           {page === 'opening' && (
             <>
               <p className="eyebrow">Welcome to Tally</p>
@@ -3420,9 +3448,6 @@ function OnboardingIntroduction({
                     <strong>Emergency Fund</strong>
                   </article>
                 </div>
-                <div className="tap-indicator tap-assistant" aria-hidden="true">
-                  <span />
-                </div>
               </div>
             </>
           )}
@@ -3432,34 +3457,36 @@ function OnboardingIntroduction({
               <p className="eyebrow">Guided Transaction Review</p>
               <h1>Review more transactions in less time.</h1>
               <p>
-                Tally groups transactions it believes belong together, allowing you to approve its
-                suggestions and quickly categorize anything that still needs your attention.
+                Tally groups likely matches so you can approve the batch quickly, remove any
+                outliers, and keep moving.
               </p>
               <div className="intro-visual transaction-review-visual">
                 <div className="review-column dining">
                   <h3>
                     <UtensilsCrossed size={16} /> Dining
                   </h3>
-                  <div className="review-item">Chipotle · $18.42</div>
-                  <div className="review-item">Panera · $13.80</div>
+                  <div className="review-item">
+                    <span className="review-item-content">Chipotle · $18.42</span>
+                    <span className="review-item-status">
+                      <Check size={12} /> Categorized
+                    </span>
+                  </div>
+                  <div className="review-item">
+                    <span className="review-item-content">Panera · $13.80</span>
+                    <span className="review-item-status">
+                      <Check size={12} /> Categorized
+                    </span>
+                  </div>
                   <div className="review-item wrong">Whole Foods · $86.31</div>
-                  <div className="review-item">Local Cafe · $9.14</div>
-                </div>
-                <div className="review-column groceries">
-                  <h3>
-                    <ShoppingCart size={16} /> Groceries
-                  </h3>
-                  <div className="review-item incoming">Whole Foods · $86.31</div>
-                </div>
-                <div className="review-badge">
-                  <Check size={16} /> Batch approved
-                </div>
-                <div className="review-count-shift">
-                  <span>Needs review</span>
-                  <strong className="intro-number-shift">
-                    <span className="before">4</span>
-                    <span className="after">1</span>
-                  </strong>
+                  <div className="review-item">
+                    <span className="review-item-content">Local Cafe · $9.14</span>
+                    <span className="review-item-status">
+                      <Check size={12} /> Categorized
+                    </span>
+                  </div>
+                  <button className="review-approve-button" type="button">
+                    <Check size={14} /> Approve dining batch
+                  </button>
                 </div>
                 <div className="intro-mascot-cue review">
                   <MoneyPlantMascot
@@ -3512,34 +3539,30 @@ function OnboardingIntroduction({
               <div className="intro-visual transfer-envelope-visual">
                 <article className="transfer-envelope-card from">
                   <header>
-                    <ShoppingBag size={15} /> Shopping
+                    <ShoppingBag size={15} /> Dining Out
                   </header>
-                  <strong className="transfer-balance">
-                    <span className="before">$180.00</span>
-                    <span className="after">$120.00</span>
+                  <strong className="transfer-balance transfer-balance-surplus">
+                    <span className="before">$260.00</span>
+                    <span className="after">$160.00</span>
                   </strong>
-                  <small>Available before transfer</small>
+                  <small>Surplus category funding another envelope</small>
                 </article>
                 <div className="transfer-arrow" aria-hidden="true">
                   <ArrowRight size={20} />
                 </div>
                 <article className="transfer-envelope-card to">
                   <header>
-                    <UtensilsCrossed size={15} /> Dining
+                    <Car size={15} /> Car Repairs
                   </header>
-                  <strong className="transfer-balance">
-                    <span className="before">$140.00</span>
-                    <span className="after">$200.00</span>
+                  <strong className="transfer-balance transfer-balance-rescue">
+                    <span className="before">-$45.00</span>
+                    <span className="after">$55.00</span>
                   </strong>
-                  <small>Needs an extra boost this week</small>
+                  <small>Moves from negative to positive</small>
                 </article>
-                <div className="transfer-chip chip-one" aria-hidden="true">
-                  <Plus size={12} /> $40
+                <div className="transfer-chip transfer-chip-single" aria-hidden="true">
+                  <Plus size={12} /> $100
                 </div>
-                <div className="transfer-chip chip-two" aria-hidden="true">
-                  <Plus size={12} /> $20
-                </div>
-                <p className="transfer-note">Two quick transfers, totals updated instantly.</p>
               </div>
             </>
           )}
@@ -3578,29 +3601,20 @@ function OnboardingIntroduction({
                   <article className="review-story-card card-4">
                     <p>Ready for next month</p>
                     <strong>New ending balances saved</strong>
-                    <small>Tap next to move through your story</small>
+                    <small>Your monthly story assembles automatically.</small>
                   </article>
                 </div>
                 <div className="intro-mascot-cue month">
                   <MoneyPlantMascot mood="curious" className="mood-mascot small" alt="Curious mascot" />
-                  <small>One swipe at a time, your monthly patterns come into focus.</small>
+                  <small>Each scene advances on its own to reveal your patterns.</small>
                 </div>
                 <div className="story-controls" aria-hidden="true">
-                  <button type="button">
-                    <ArrowLeft size={14} />
-                  </button>
                   <div className="story-dots">
                     <span className="active" />
                     <span />
                     <span />
                     <span />
                   </div>
-                  <button type="button">
-                    <ArrowRight size={14} />
-                  </button>
-                </div>
-                <div className="tap-indicator tap-review" aria-hidden="true">
-                  <span />
                 </div>
               </div>
             </>
@@ -3615,54 +3629,108 @@ function OnboardingIntroduction({
                 preserving your budget structure or begin again with a completely new budget.
               </p>
               <div className="intro-visual clean-slate-visual">
-                <div className="clean-slate-before">
-                  <header>
-                    <strong>Before reset</strong>
-                    <span>Unreliable totals</span>
+                <div className="clean-dashboard-shell" aria-hidden="true">
+                  <header className="clean-dashboard-header">
+                    <strong>Overview dashboard</strong>
+                    <span>Before reset</span>
                   </header>
-                  <div className="clean-overdue-total">
-                    <span>Overdue items to resolve</span>
-                    <strong className="intro-number-shift">
-                      <span className="before">36</span>
-                      <span className="after">0</span>
-                    </strong>
+
+                  <div className="clean-dashboard-stats">
+                    <article className="clean-stat-card overdue">
+                      <span>Overdue categories</span>
+                      <strong className="clean-shift-number">
+                        <span className="before">4</span>
+                        <span className="after">0</span>
+                      </strong>
+                    </article>
+                    <article className="clean-stat-card negative">
+                      <span>Negative envelopes</span>
+                      <strong className="clean-shift-number">
+                        <span className="before">3</span>
+                        <span className="after">0</span>
+                      </strong>
+                    </article>
+                    <article className="clean-stat-card pending">
+                      <span>Unreviewed charges</span>
+                      <strong className="clean-shift-number">
+                        <span className="before">36</span>
+                        <span className="after">0</span>
+                      </strong>
+                    </article>
                   </div>
-                  <div className="overdue-row">
-                    <span>Dining</span>
-                    <small>18 overdue charges</small>
+
+                  <div className="clean-dashboard-main">
+                    <section className="clean-dial-panel">
+                      <div className="clean-dial-ring">
+                        <div className="clean-dial-inner">
+                          <small>Income used</small>
+                          <strong className="clean-shift-number compact">
+                            <span className="before">112%</span>
+                            <span className="after">0%</span>
+                          </strong>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section className="clean-category-list">
+                      <header className="clean-category-header">
+                        <span>Category</span>
+                        <span>Envelope balance</span>
+                        <span>Usage</span>
+                      </header>
+                      <div className="clean-category-row">
+                        <span className="clean-category-name">Dining</span>
+                        <strong className="clean-row-balance negative">
+                          <span className="before">-$118</span>
+                          <span className="after">$0</span>
+                        </strong>
+                        <div className="clean-progress-track danger">
+                          <span className="before" />
+                          <span className="after" />
+                        </div>
+                      </div>
+                      <div className="clean-category-row">
+                        <span className="clean-category-name">Shopping</span>
+                        <strong className="clean-row-balance negative">
+                          <span className="before">-$64</span>
+                          <span className="after">$0</span>
+                        </strong>
+                        <div className="clean-progress-track warning">
+                          <span className="before" />
+                          <span className="after" />
+                        </div>
+                      </div>
+                      <div className="clean-category-row">
+                        <span className="clean-category-name">Transportation</span>
+                        <strong className="clean-row-balance negative">
+                          <span className="before">-$29</span>
+                          <span className="after">$0</span>
+                        </strong>
+                        <div className="clean-progress-track warning-soft">
+                          <span className="before" />
+                          <span className="after" />
+                        </div>
+                      </div>
+                      <div className="clean-category-row">
+                        <span className="clean-category-name">Groceries</span>
+                        <strong className="clean-row-balance neutral">
+                          <span className="before">Mismatch</span>
+                          <span className="after">Aligned</span>
+                        </strong>
+                        <div className="clean-progress-track mismatch">
+                          <span className="before" />
+                          <span className="after" />
+                        </div>
+                      </div>
+                    </section>
                   </div>
-                  <div className="overdue-row">
-                    <span>Shopping</span>
-                    <small>11 overdue charges</small>
-                  </div>
-                  <div className="overdue-row">
-                    <span>Transportation</span>
-                    <small>7 overdue charges</small>
-                  </div>
-                  <div className="overdue-row">
-                    <span>Groceries</span>
-                    <small>Balance mismatch</small>
-                  </div>
+
+                  <div className="clean-reset-sweep" />
                 </div>
                 <div className="clean-slate-action">
                   <ArrowLeftRight size={16} /> Reset transactions and envelope totals
                 </div>
-                <div className="tap-indicator tap-clean" aria-hidden="true">
-                  <span />
-                </div>
-                <div className="clean-slate-after">
-                  <header>
-                    <strong>After reset</strong>
-                    <span>Structure preserved</span>
-                  </header>
-                  <div className="clean-envelopes">
-                    <span>Housing</span>
-                    <span>Groceries</span>
-                    <span>Emergency Fund</span>
-                    <span>Dining</span>
-                  </div>
-                  <p>Past transactions cleared, envelope plan stays in place.</p>
-                </div>
+                <p className="clean-slate-caption">Past transactions are cleared while your envelope structure stays intact.</p>
                 <div className="intro-mascot-cue clean">
                   <MoneyPlantMascot mood="celebrating" className="mood-mascot small" alt="Celebrating mascot" />
                   <small>Reset complete. Your envelope structure is ready to use today.</small>
@@ -3670,6 +3738,7 @@ function OnboardingIntroduction({
               </div>
             </>
           )}
+          </div>
         </section>
 
         <footer className="intro-footer">
@@ -3679,7 +3748,10 @@ function OnboardingIntroduction({
                 aria-label={`Go to introduction page ${index + 1}`}
                 className={index === pageIndex ? 'active' : ''}
                 key={entry}
-                onClick={() => setPageIndex(index)}
+                onClick={() => {
+                  setAutoPlayEnabled(false)
+                  setPageIndex(index)
+                }}
                 type="button"
               />
             ))}
@@ -3694,9 +3766,9 @@ function OnboardingIntroduction({
             </button>
             <button className="primary-action" onClick={goNext} type="button">
               {isFirst
-                ? 'See what Tally can do'
+                ? 'Start guided preview'
                 : isLast
-                  ? 'Enter overview'
+                  ? 'Enter setup'
                   : 'Next'}{' '}
               <ArrowRight size={16} />
             </button>
@@ -4967,7 +5039,9 @@ function CategoriesView({
   onCommit: (state: PrototypeState, entry?: AuditEntry) => void
   onOpenSettings: () => void
 }) {
-  const [newCategory, setNewCategory] = useState('')
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [newCategoryGroup, setNewCategoryGroup] = useState<BudgetGroup>('Wants')
+  const [showCreateEnvelopeModal, setShowCreateEnvelopeModal] = useState(false)
   const [showMoneyModal, setShowMoneyModal] = useState(false)
   const [pendingOverBudget, setPendingOverBudget] = useState<{
     categoryId: string
@@ -4986,16 +5060,45 @@ function CategoriesView({
       .filter((item) => item.group === group)
       .reduce((sum, item) => sum + item.monthlyTarget, 0),
   }))
-  let donutCursor = 0
-  const donutStops = totalBudgeted
-    ? groupTotals
-        .map(({ group, total }) => {
-          const start = donutCursor
-          donutCursor += (total / totalBudgeted) * 100
-          return `var(--${group.toLowerCase()}) ${start}% ${donutCursor}%`
-        })
-        .join(', ')
-    : 'var(--line) 0 100%'
+  const incomeBase = state.monthlyIncome > 0 ? state.monthlyIncome : Math.max(totalBudgeted, 1)
+  const widthBase = totalBudgeted > incomeBase ? totalBudgeted : incomeBase
+  const formatIncomeShare = (amount: number) => {
+    const rawPct = (amount / incomeBase) * 100
+    if (amount > 0 && rawPct < 1) return '<1%'
+    return `${Math.round(rawPct)}%`
+  }
+  const groupBreakdown: Array<{ key: string; label: string; className: string; pct: string; width: number }> =
+    groupTotals.map(({ group, total }) => ({
+      key: group,
+      label: group,
+      className: group.toLowerCase(),
+      pct: formatIncomeShare(total),
+      width: (total / widthBase) * 100,
+    }))
+  const unallocated = Math.max(0, state.monthlyIncome - totalBudgeted)
+  if (unallocated > 0) {
+    groupBreakdown.push({
+      key: 'unallocated',
+      label: 'Unallocated',
+      className: 'unallocated',
+      pct: formatIncomeShare(unallocated),
+      width: (unallocated / widthBase) * 100,
+    })
+  }
+  const barSegments = groupBreakdown.map((segment) => ({
+    ...segment,
+    width: Math.max(0, Math.min(segment.width, 100)),
+  }))
+  let usedWidth = 0
+  const normalizedBarSegments = barSegments.map((segment, index) => {
+    if (index === barSegments.length - 1) {
+      const finalWidth = Math.max(0, 100 - usedWidth)
+      return { ...segment, width: finalWidth }
+    }
+    const width = Math.max(0, Math.min(segment.width, 100 - usedWidth))
+    usedWidth += width
+    return { ...segment, width }
+  })
 
   function updateCategory(categoryId: string, patch: Partial<BudgetCategory>) {
     onCommit({
@@ -5016,6 +5119,28 @@ function CategoriesView({
     if (newTotal > state.monthlyIncome && !wasAlreadyOver) {
       setPendingOverBudget({ categoryId: category.id, previousValue, newTotal })
     }
+  }
+
+  function addEnvelope(event?: FormEvent) {
+    event?.preventDefault()
+    const name = newCategoryName.trim()
+    if (!name) return
+    const category: BudgetCategory = {
+      id: crypto.randomUUID(),
+      name,
+      group: newCategoryGroup,
+      monthlyTarget: 0,
+      openingBalance: 0,
+      warningThreshold: 80,
+      archived: false,
+    }
+    onCommit(
+      { ...state, categories: [...state.categories, category] },
+      audit('Category created', `${category.name} added to ${category.group}.`),
+    )
+    setNewCategoryName('')
+    setNewCategoryGroup('Wants')
+    setShowCreateEnvelopeModal(false)
   }
 
   return (
@@ -5055,17 +5180,23 @@ function CategoriesView({
           </div>
         </div>
         <div className="budget-donut-wrap">
-          <div className="budget-donut" style={{ background: `conic-gradient(${donutStops})` }}>
-            <div className="budget-donut-hole">
-              <strong>{money(totalBudgeted)}</strong>
-              <span>budgeted</span>
-            </div>
+          <div className="budget-split-summary">
+            <strong>{money(totalBudgeted)}</strong>
+            <span>budgeted</span>
+          </div>
+          <div className="budget-split-track" role="img" aria-label="Envelope allocation by group">
+            {normalizedBarSegments.map(({ key, className, width }, index) => (
+              <span
+                className={`allocation-segment ${className} ${index === 0 ? 'first' : ''} ${index === groupBreakdown.length - 1 ? 'last' : ''}`}
+                key={key}
+                style={{ width: `${width}%` }}
+              />
+            ))}
           </div>
           <ul className="budget-donut-legend">
-            {groupTotals.map(({ group, total }) => (
-              <li className={group.toLowerCase()} key={group}>
-                <i /> {group}{' '}
-                <b>{totalBudgeted > 0 ? Math.round((total / totalBudgeted) * 100) : 0}%</b>
+            {groupBreakdown.map(({ key, label, className, pct }) => (
+              <li className={className} key={key}>
+                <i /> {label} <b>{pct}</b>
               </li>
             ))}
           </ul>
@@ -5074,40 +5205,17 @@ function CategoriesView({
       </div>
       <div className="category-toolbar">
         <span>{activeCategories.length} active envelopes</span>
-        <div className="category-toolbar-actions">
+        <div className="category-toolbar-actions categories-toolbar-actions">
           <button className="outline-action" onClick={() => setShowMoneyModal(true)} type="button">
             <ArrowLeftRight size={16} /> Add / transfer money
           </button>
-          <label className="inline-add">
-            <input
-              onChange={(event) => setNewCategory(event.target.value)}
-              placeholder="New envelope name"
-              value={newCategory}
-            />
-            <button
-              onClick={() => {
-                if (!newCategory.trim()) return
-                const category: BudgetCategory = {
-                  id: crypto.randomUUID(),
-                  name: newCategory.trim(),
-                  group: 'Wants',
-                  monthlyTarget: 0,
-                  openingBalance: 0,
-                  warningThreshold: 80,
-                  archived: false,
-                }
-                onCommit(
-                  { ...state, categories: [...state.categories, category] },
-                  audit('Category created', `${category.name} added to Wants.`),
-                )
-                setNewCategory('')
-              }}
-              title="Add envelope"
-              type="button"
-            >
-              <Plus size={17} /> Add envelope
-            </button>
-          </label>
+          <button
+            className="outline-action"
+            onClick={() => setShowCreateEnvelopeModal(true)}
+            type="button"
+          >
+            <Plus size={17} /> Add envelope
+          </button>
         </div>
       </div>
       <table className="category-table editable-table">
@@ -5116,7 +5224,6 @@ function CategoriesView({
             <th>Category</th>
             <th>Group</th>
             <th className="num">Monthly contribution</th>
-            <th className="num">Warn at</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -5129,7 +5236,7 @@ function CategoriesView({
           return (
             <tbody className={group.toLowerCase()} key={group}>
               <tr className="group-header-row">
-                <td colSpan={5}>
+                <td colSpan={4}>
                   <div className="group-header-content">
                     <span className="group-name">
                       <i /> {group} · {items.length}{' '}
@@ -5204,23 +5311,6 @@ function CategoriesView({
                         }
                         onBlur={() => handleTargetBlur(category)}
                       />
-                    </label>
-                  </td>
-                  <td className="num">
-                    <label className="inline-percent">
-                      <input
-                        aria-label={`${category.name} warning threshold`}
-                        max="100"
-                        min="1"
-                        type="number"
-                        value={category.warningThreshold}
-                        onChange={(event) =>
-                          updateCategory(category.id, {
-                            warningThreshold: Number(event.target.value),
-                          })
-                        }
-                      />
-                      <span>%</span>
                     </label>
                   </td>
                   <td>
@@ -5298,6 +5388,56 @@ function CategoriesView({
                 Keep it anyway
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {showCreateEnvelopeModal && (
+        <div className="modal-overlay">
+          <div className="modal-card create-envelope-modal">
+            <h2>Add envelope</h2>
+            <p>Give your new envelope a name and choose which budget group it belongs to.</p>
+            <form
+              onSubmit={(event) => {
+                void addEnvelope(event)
+              }}
+            >
+              <label>
+                Envelope name
+                <input
+                  autoFocus
+                  onChange={(event) => setNewCategoryName(event.target.value)}
+                  placeholder="e.g. Childcare"
+                  value={newCategoryName}
+                />
+              </label>
+              <label>
+                Envelope category
+                <select
+                  onChange={(event) => setNewCategoryGroup(event.target.value as BudgetGroup)}
+                  value={newCategoryGroup}
+                >
+                  <option value="Needs">Needs</option>
+                  <option value="Wants">Wants</option>
+                  <option value="Savings">Savings</option>
+                </select>
+              </label>
+              <div className="modal-actions">
+                <button
+                  className="outline-action"
+                  onClick={() => {
+                    setShowCreateEnvelopeModal(false)
+                    setNewCategoryName('')
+                    setNewCategoryGroup('Wants')
+                  }}
+                  type="button"
+                >
+                  Cancel
+                </button>
+                <button className="primary-action" disabled={!newCategoryName.trim()} type="submit">
+                  Add envelope
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

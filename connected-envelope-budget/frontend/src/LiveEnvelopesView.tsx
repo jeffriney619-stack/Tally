@@ -151,7 +151,7 @@ export function LiveEnvelopesView({ username }: { username: string }) {
                   const status = isSavings
                     ? 'healthy'
                     :
-                    available < 0 ? 'over' : usage >= category.warningThreshold ? 'near' : 'healthy'
+                    available < 0 ? 'over' : 'healthy'
                   return { category, spent, available, usage, status, isSavings }
                 })
               if (rows.length === 0) return null
@@ -207,9 +207,7 @@ export function LiveEnvelopesView({ username }: { username: string }) {
                           <span className={`status-pill ${status}`}>
                             {status === 'over'
                               ? 'Over limit'
-                              : status === 'near'
-                                ? 'Near limit'
-                                : 'On track'}
+                              : 'On track'}
                           </span>
                         )}
                       </td>
