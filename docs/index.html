@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tally MVP to Beta - Consolidated Build Summary</title>
+  <style>
+    :root {
+      --bg: #f3efe6;
+      --surface: #fffdf8;
+      --ink: #1a2521;
+      --muted: #5d6b64;
+      --line: #d7ddd6;
+      --forest: #14513d;
+      --forest-soft: #deebe5;
+      --amber: #9b6b1b;
+      --amber-soft: #f3e8cc;
+      --coral: #9e4336;
+      --coral-soft: #f3dfda;
+      --blue: #2b6280;
+      --blue-soft: #deebf3;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 8% 8%, #fff4dc 0%, transparent 34%),
+        radial-gradient(circle at 92% 10%, #e0efe7 0%, transparent 30%),
+        var(--bg);
+      color: var(--ink);
+      font-family: Georgia, "Times New Roman", serif;
+      line-height: 1.62;
+    }
+
+    .wrap {
+      width: min(1080px, calc(100% - 34px));
+      margin: 34px auto 54px;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 10px 34px rgba(18, 31, 25, 0.08);
+      overflow: hidden;
+    }
+
+    header {
+      padding: 30px 30px 24px;
+      border-bottom: 1px solid var(--line);
+      background:
+        linear-gradient(120deg, rgba(20, 81, 61, 0.06), rgba(155, 107, 27, 0.08));
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--forest);
+      font-size: clamp(1.8rem, 3vw, 2.6rem);
+      line-height: 1.14;
+    }
+
+    .subtitle {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    section {
+      padding: 24px 30px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    section:last-of-type {
+      border-bottom: 0;
+    }
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: 1.28rem;
+      color: #103d2f;
+    }
+
+    h3 {
+      margin: 16px 0 8px;
+      font-size: 1.03rem;
+      color: #1d3a55;
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+    }
+
+    p {
+      margin: 0 0 12px;
+    }
+
+    ol, ul {
+      margin: 0;
+      padding-left: 22px;
+    }
+
+    li {
+      margin: 7px 0;
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: #2f4139;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .step {
+      border: 1px solid var(--line);
+      border-left: 6px solid var(--forest);
+      border-radius: 8px;
+      padding: 14px 14px 12px;
+      background: #fff;
+    }
+
+    .step:nth-child(2n) {
+      border-left-color: var(--blue);
+    }
+
+    .step:nth-child(3n) {
+      border-left-color: var(--amber);
+    }
+
+    .step strong {
+      display: block;
+      margin-bottom: 5px;
+      font-family: "Trebuchet MS", Verdana, sans-serif;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      color: #1d2c37;
+    }
+
+    .callout {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-left: 5px solid var(--coral);
+      background: var(--coral-soft);
+      border-radius: 4px;
+    }
+
+    .matrix {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1px;
+      border: 1px solid var(--line);
+      background: var(--line);
+      margin-top: 12px;
+    }
+
+    .cell {
+      padding: 14px;
+      background: #fff;
+    }
+
+    .cell h3 {
+      margin-top: 0;
+      color: #1e3f34;
+    }
+
+    .status-live { background: var(--forest-soft); }
+    .status-sim { background: var(--blue-soft); }
+    .status-next { background: var(--amber-soft); }
+
+    .footer {
+      padding: 20px 30px 28px;
+      color: var(--muted);
+      font-size: 0.94rem;
+      border-top: 1px solid var(--line);
+      background: #fcfbf7;
+    }
+
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      background: #f0f4f2;
+      border: 1px solid #d5dfd9;
+      border-radius: 5px;
+      padding: 1px 6px;
+      font-size: 0.92em;
+    }
+
+    @media (max-width: 820px) {
+      .matrix {
+        grid-template-columns: 1fr;
+      }
+
+      header, section, .footer {
+        padding-left: 18px;
+        padding-right: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <article class="panel">
+      <header>
+        <h1>Tally MVP to Beta - Consolidated Build Summary</h1>
+        <p class="subtitle">Period covered: early HTML prototyping to polished beta readiness, including implementation docs, Twilio/OpenAI integration work, and GitHub backup hardening.</p>
+      </header>
+
+      <section>
+        <h2>1. Executive Summary</h2>
+        <p>Tally progressed from stand-alone concept prototypes into an integrated full-stack beta candidate. The project moved through three major layers: visual product prototyping (HTML artifacts), product-plan scaffolding and implementation structure (Markdown plans, acceptance definitions, and phase gates), and production-oriented code integration (backend/frontend APIs, AI assistant wiring, SMS consent infrastructure, and repository backup hardening).</p>
+        <div class="badge-row">
+          <span class="badge">MVP Concepting</span>
+          <span class="badge">Product Plan Driven</span>
+          <span class="badge">Feature Planning</span>
+          <span class="badge">Backend + Frontend Integration</span>
+          <span class="badge">Public Launch Plan Defined</span>
+          <span class="badge">GitHub to Vercel/Render Connected</span>
+          <span class="badge">Twilio Path Defined</span>
+          <span class="badge">OpenAI Path Wired</span>
+          <span class="badge">GitHub Backup Verified</span>
+          <span class="badge">Main Branch Push Automation</span>
+        </div>
+      </section>
+
+      <section>
+        <h2>2. Narrative Flow: Why It Was Built, What Was Learned, and How to Scale to 10,000 Enterprise Customers</h2>
+        <h3>Customer problem (opening statement)</h3>
+        <p>People who want to budget consistently often stop because categorization and month-close workflows are high-friction. Tally was built to reduce that friction by combining envelope budgeting discipline with guided AI and messaging-assisted decision support.</p>
+        <h3>Hypothesis</h3>
+        <p>If categorization, review, and onboarding are made conversational, structured, and visually clear, users will complete more budgeting actions with less fatigue, resulting in better month-to-month financial consistency.</p>
+        <h3>Solution tied to hypothesis</h3>
+        <ol>
+          <li>Built guided setup, AI-assisted envelope curation, and month-in-review summaries to lower startup and reflection friction.</li>
+          <li>Implemented staged SMS behavior to meet users where they already make quick decisions.</li>
+          <li>Connected planning artifacts to implementation phases so product claims are traceable to shipped behavior.</li>
+        </ol>
+        <h3>What was learned</h3>
+        <ol>
+          <li>Prompt scaffolding quality has direct impact on delivery quality and consistency.</li>
+          <li>Plan-first structure reduces rework during long AI-assisted builds.</li>
+          <li>Hybrid simulation plus live consent infrastructure is a practical path before full carrier integration.</li>
+          <li>Backup discipline and clean-clone validation are required for real beta confidence.</li>
+        </ol>
+        <h3>How to scale toward 10,000 enterprise customers</h3>
+        <ol>
+          <li>Platform hardening: production auth, tenant isolation, secrets management, observability, and rate limiting.</li>
+          <li>Data and messaging scale: managed database migration path, queue-backed async jobs, resilient webhook processing, and Twilio production campaign operations.</li>
+          <li>Reliability model: SLOs, alerting, synthetic monitoring, incident runbooks, and automated disaster recovery checks.</li>
+          <li>Commercial readiness: audited compliance pages, policy controls, customer support workflows, and role-based access governance.</li>
+          <li>AI governance: prompt/version management, evaluation harnesses, fallback behavior, and human-override controls for sensitive flows.</li>
+        </ol>
+        <h3>AI capability demonstrated</h3>
+        <ul>
+          <li>AI was used for requirements refinement, scaffolded implementation planning, and code acceleration across stack boundaries.</li>
+          <li>The project demonstrates effective AI leverage when paired with explicit constraints, phased gates, and verification discipline.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>3. Build Timeline (MVP to Polished Beta)</h2>
+        <div class="timeline">
+          <div class="step">
+            <strong>Phase A - Prototype Direction</strong>
+            Initial product concepts were explored in visual HTML artifacts to shape IA, onboarding, budgeting interactions, and narrative framing before deep implementation.
+          </div>
+          <div class="step">
+            <strong>Phase B - Product Definition and UX Narrative</strong>
+            The product definition and journey documentation established acceptance criteria, feature boundaries, and intended user flow from setup to categorization to review.
+          </div>
+          <div class="step">
+            <strong>Phase C - Structured Feature Plans</strong>
+            Multiple Markdown plans captured scope and rollout for Month in Review, AI Envelope Assistant, transaction review flow, clean slate, forecasting, badges, and text integration.
+          </div>
+          <div class="step">
+            <strong>Phase D - Working Feature Implementation</strong>
+            Backend and frontend integration shipped for core budgeting behavior, account data persistence, category/transaction operations, and month in review walkthrough/dashboard behavior.
+          </div>
+          <div class="step">
+            <strong>Phase E - External Integration Track</strong>
+            OpenAI-backed assistant call path was wired through backend configuration and controller logic. Twilio implementation advanced through consent infrastructure and simulator behavior, with real two-way carrier flow staged for next phase.
+          </div>
+          <div class="step">
+            <strong>Phase F - Beta Readiness and Backup</strong>
+            The polished beta snapshot was secured to GitHub, secrets were scrubbed from tracked config, ignore rules were tightened, and clean-clone validation confirmed repo portability.
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>4. Product Plan and Structure as the Delivery Engine</h2>
+        <p>The key transition from MVP experiments to beta quality came from formalizing plan structure, not just writing more code. Product intent, scope boundaries, implementation order, and acceptance checks were written first, then executed as a repeatable flow.</p>
+        <h3>Structural pattern that was followed</h3>
+        <ol>
+          <li>Define behavior and user promise in product artifacts.</li>
+          <li>Translate behavior into implementation plans with explicit phases and rules.</li>
+          <li>Implement in vertical slices across backend, frontend, and persistence.</li>
+          <li>Validate with build checks, browser checks, and clean-clone tests.</li>
+          <li>Capture progress and remaining work in living plan documents.</li>
+        </ol>
+        <h3>Primary plan artifacts that shaped execution</h3>
+        <ul>
+          <li>Connected product definition and acceptance criteria</li>
+          <li>Month in Review implementation progress and phase closure</li>
+          <li>AI Envelope Assistant integration plan</li>
+          <li>Text integration summary and Twilio rollout boundary</li>
+          <li>Remaining work map for post-beta expansion</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>5. HTML-to-Implementation Bridge</h2>
+        <ol>
+          <li>Randomized early HTML explorations evolved into focused product artifacts that clarified product intent and feature sequence.</li>
+          <li>Those artifacts were translated into implementation plans and acceptance-style checklists across multiple Markdown files.</li>
+          <li>The plan set then mapped into the actual codebase in <code>connected-envelope-budget/frontend</code> and <code>connected-envelope-budget/backend</code>.</li>
+          <li>This closed the "gap" between MVP ideation and polished beta by turning design intent into testable, integrated behavior.</li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>6. Tech Stack Used</h2>
+        <div class="matrix">
+          <div class="cell status-live">
+            <h3>Frontend</h3>
+            <ul>
+              <li>React + TypeScript for product UI and feature state flows.</li>
+              <li>Vite-based development workflow for local iteration.</li>
+              <li>Browser-tested interface patterns for dashboard, setup, review, and simulator screens.</li>
+              <li>Hosted on Vercel with GitHub-connected automatic deploys from <code>main</code>.</li>
+            </ul>
+          </div>
+          <div class="cell status-live">
+            <h3>Backend</h3>
+            <ul>
+              <li>ASP.NET Core Web API with controller-based endpoints.</li>
+              <li>JWT authentication pipeline and CORS policy for local frontend integration.</li>
+              <li>Domain endpoints for transactions, categories, setup, clean slate, AI assistant, and SMS consent.</li>
+              <li>Hosted on Render as a Docker web service with GitHub-connected automatic deploys from <code>main</code>.</li>
+            </ul>
+          </div>
+          <div class="cell status-live">
+            <h3>Data Layer</h3>
+            <ul>
+              <li>SQLite persistence for local multi-user prototype data.</li>
+              <li>EF Core context and model mapping with explicit table creation at startup.</li>
+              <li>Backfill logic to preserve existing prototype-state data during schema evolution.</li>
+              <li>Production persistence uses SQLite on a mounted Render disk at <code>/var/data/connected-budget.db</code>.</li>
+            </ul>
+          </div>
+          <div class="cell status-next">
+            <h3>External Integrations</h3>
+            <ul>
+              <li>OpenAI API-backed assistant path configured in backend settings/controller flow.</li>
+              <li>Twilio rollout in staged mode: live consent + simulator now, carrier send/receive path next.</li>
+              <li>GitHub as protected backup and source recovery baseline.</li>
+              <li>Deployment automation script at <code>scripts/push-main-and-verify.ps1</code> for stage/commit/push and live URL checks.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>7. Prompt Scaffolding and Delivery Method</h2>
+        <p>Prompt scaffolding was treated as part of system architecture. The kickoff scaffold provided the operational method that converted broad ideas into deterministic implementation progress.</p>
+        <h3>What the scaffold enforced</h3>
+        <ol>
+          <li>Environment audit before coding, including dependency checks and blockers.</li>
+          <li>Clarifying interview before implementation to force precise product intent.</li>
+          <li>Phased execution with stop points, verification gates, and explicit completion criteria.</li>
+          <li>Spec to plan to implementation sequencing to avoid ad-hoc code drift.</li>
+          <li>Instruction-file codification so future sessions can continue consistently.</li>
+        </ol>
+        <h3>Outcome of scaffold usage in Tally</h3>
+        <ul>
+          <li>Reduced ambiguity between user intent and AI output.</li>
+          <li>Higher continuity across long multi-session development.</li>
+          <li>Faster recovery from context gaps by relying on durable artifacts, not memory alone.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>8. Integration Status Snapshot</h2>
+        <div class="matrix">
+          <div class="cell status-live">
+            <h3>OpenAI Integration (Implemented Path)</h3>
+            <ul>
+              <li>Backend config supports AI assistant endpoint/model settings.</li>
+              <li>AI assistant controller validates endpoint/key presence before calls.</li>
+              <li>Key handling moved toward secure pattern by removing exposed tracked key values.</li>
+            </ul>
+          </div>
+          <div class="cell status-sim">
+            <h3>Twilio/SMS Integration (Hybrid State)</h3>
+            <ul>
+              <li>Live consent APIs and persistence are implemented.</li>
+              <li>Onboarding and settings can capture/update SMS consent state.</li>
+              <li>SMS conversation UX currently runs as simulation for budgeting interactions.</li>
+            </ul>
+          </div>
+          <div class="cell status-next">
+            <h3>Twilio Real-Time Path (Next Step)</h3>
+            <ul>
+              <li>A2P campaign completion and live provider send/receive pipeline remain pending.</li>
+              <li>Inbound webhook handling and end-to-end message orchestration are still to be finalized.</li>
+              <li>Public legal URLs (Privacy/Terms) are the known prerequisite for campaign completion.</li>
+            </ul>
+          </div>
+          <div class="cell">
+            <h3>Month in Review Delivery</h3>
+            <ul>
+              <li>Core phases reported complete through production cleanup/polish.</li>
+              <li>Late categorized transaction recalculation is implemented and verified.</li>
+              <li>A small set of enhancements remains optional/out-of-scope for beta.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>9. Security and Backup Completion</h2>
+        <ol>
+          <li>Polished beta state was backed up to GitHub as the durable source-of-truth snapshot.</li>
+          <li>Detected key exposure risk was remediated by removing tracked secret values and tightening ignore practices.</li>
+          <li>Backup automation was added via <code>scripts/backup-to-github.ps1</code> for repeatable session-end sync.</li>
+          <li>Clean-room clone testing validated that backend/frontend startup works from repository state alone.</li>
+        </ol>
+        <div class="callout">
+          Result: Tally is now in a beta-ready posture with documented product direction, implemented core behaviors, external integration staging, and a verified GitHub recovery path.
+        </div>
+      </section>
+
+      <section>
+        <h2>10. Public Launch and Deployment Operations (Completed)</h2>
+        <ol>
+          <li>Created and executed a production path to make Tally publicly reachable with controlled rollout assumptions for early users.</li>
+          <li>Connected the GitHub repository to both Vercel (frontend) and Render (backend), enabling branch-driven deployment from repository updates.</li>
+          <li>Added deployment helper automation in <code>scripts/push-main-and-verify.ps1</code> to stage, commit, push to <code>main</code>, and run quick live endpoint checks.</li>
+          <li>Verified live deployment health and persistence behavior, confirming production data writes are retained on the Render persistent disk.</li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>11. Artifact Trail (What Was Created Across the Gap)</h2>
+        <p>The progression is visible across three artifact classes:</p>
+        <ol>
+          <li><strong>HTML prototypes and narratives:</strong> concept mockups, product definition, journey/retrospective, and readiness narratives.</li>
+          <li><strong>Markdown implementation docs:</strong> feature plans, integration plans, progress logs, and remaining work breakdowns.</li>
+          <li><strong>Code and automation:</strong> backend/frontend feature wiring, integration endpoints, consent persistence, and backup script automation.</li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>12. Final Readout</h2>
+        <p>Tally has moved from exploratory MVP prototypes to a polished beta deliverable with an operational codebase, explicit product-plan structure, staged AI/SMS integration strategy, completed GitHub backup hardening, and active public hosting via GitHub-connected Vercel and Render services. The major remaining effort is converting the current hybrid texting implementation into fully live Twilio two-way messaging once public compliance prerequisites are in place.</p>
+      </section>
+
+      <div class="footer">
+        Snapshot date: 2026-09-18<br>
+        Backup command reference: <code>powershell -ExecutionPolicy Bypass -File .\scripts\backup-to-github.ps1</code><br>
+        Main deploy command reference: <code>powershell -ExecutionPolicy Bypass -File .\scripts\push-main-and-verify.ps1 -Message "Your update summary"</code>
+      </div>
+    </article>
+  </main>
+</body>
+</html>
