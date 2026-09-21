@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI Bug Triage Pipeline — Execution Plan</title>
+<style>
+  :root {
+    --bg: #f4f0e6;
+    --card: #fffdf8;
+    --border: #d8dfd8;
+    --primary: #14513d;
+    --primary-light: #e7f0ec;
+    --accent: #2b6280;
+    --accent-light: #deebf3;
+    --warn: #9b6b1b;
+    --warn-light: #f3e8cc;
+    --danger: #9e4336;
+    --danger-light: #f3dfda;
+    --muted: #5d6b64;
+    --text: #1a2521;
+    --heading: #103d2f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Georgia, 'Times New Roman', serif;
+    background:
+      radial-gradient(circle at 10% 8%, #fff4dc 0%, transparent 34%),
+      radial-gradient(circle at 90% 12%, #e0efe7 0%, transparent 30%),
+      var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.66;
+  }
+  .page {
+    max-width: 1040px;
+    margin: 36px auto;
+    padding: 0 18px;
+  }
+  .doc-header {
+    border-bottom: 1px solid var(--border);
+    padding: 30px 30px 24px;
+    margin-bottom: 0;
+    background: linear-gradient(120deg, rgba(20, 81, 61, 0.08), rgba(43, 98, 128, 0.08));
+  }
+  .doc-header h1 {
+    font-size: clamp(1.85rem, 2.8vw, 2.5rem);
+    line-height: 1.2;
+    font-weight: 700;
+    color: var(--heading);
+  }
+  .doc-header .meta { color: var(--muted); font-size: 13px; margin-top: 6px; }
+  .doc-header .meta span { margin-right: 20px; }
+
+  .info-banner {
+    background: var(--primary-light);
+    border: 1px solid #b9d2c7;
+    border-left: 4px solid var(--primary);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 22px 30px 30px;
+    font-size: 13px;
+  }
+  .info-banner strong { color: var(--primary); }
+
+  h2 {
+    font-size: 1.32rem;
+    font-weight: 700;
+    color: var(--heading);
+    margin-bottom: 14px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 {
+    font-size: 1.03rem;
+    font-weight: 700;
+    color: #1d3a55;
+    margin-bottom: 8px;
+    font-family: 'Trebuchet MS', Verdana, sans-serif;
+  }
+  h4 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+  section {
+    margin-bottom: 0;
+    padding: 24px 30px;
+    border-top: 1px solid var(--border);
+    background: var(--card);
+  }
+  section:first-of-type {
+    border-top: 0;
+  }
+  p { font-size: 13px; margin-bottom: 10px; }
+  code {
+    background: #f0f4f2;
+    border: 1px solid #d5dfd9;
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 12px;
+    color: #1e293b;
+  }
+
+  .tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 20px; text-transform: uppercase; letter-spacing: .03em; }
+  .tag-manual { background: #eef2ef; color: var(--muted); }
+  .tag-ai { background: #deebf3; color: var(--accent); }
+
+  .agent-table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 10px; }
+  .agent-table th { background: #edf2ee; text-align: left; padding: 8px 10px; border: 1px solid var(--border); font-weight: 600; color: var(--heading); }
+  .agent-table td { padding: 8px 10px; border: 1px solid var(--border); vertical-align: top; }
+  .agent-table tr:nth-child(even) td { background: #fcfbf7; }
+
+  .build-order { list-style: none; padding: 0; counter-reset: step; }
+  .build-order li {
+    counter-increment: step;
+    background: #fff; border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px 10px 44px; margin-bottom: 8px; font-size: 13px; position: relative;
+  }
+  .build-order li::before {
+    content: counter(step);
+    position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+    width: 22px; height: 22px; border-radius: 50%; background: var(--primary); color: #fff;
+    font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+  }
+  .build-order li.deprioritized::before { background: var(--muted); }
+
+  .file-ref { font-size: 12px; color: var(--muted); }
+
+  .mermaid { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 18px; margin: 12px 0; }
+
+  .page {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 10px 34px rgba(18, 31, 25, 0.08);
+    overflow: hidden;
+  }
+
+  @media (max-width: 820px) {
+    .page {
+      margin: 20px auto;
+      padding: 0;
+    }
+
+    .doc-header,
+    section {
+      padding-left: 16px;
+      padding-right: 16px;
+    }
+
+    .info-banner {
+      margin-left: 16px;
+      margin-right: 16px;
+    }
+
+    .doc-header .meta span {
+      display: block;
+      margin-right: 0;
+      margin-top: 2px;
+    }
+  }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body>
+<div class="page">
+
+  <div class="doc-header">
+    <h1>AI Bug Triage Pipeline — Execution Plan</h1>
+    <div class="meta">
+      <span>Status: <strong>Rebuild in progress</strong></span>
+      <span>Author: Jeff Riney</span>
+      <span>Last updated: 2026-09-19</span>
+    </div>
+  </div>
+
+  <div class="info-banner">
+    <strong>This document is the current source of truth</strong> for phases, build order, and per-phase
+    inputs/tools/outputs. Treat it as living — update it as decisions change.
+  </div>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>Why We're Doing This</h2>
+    <h3>The problem</h3>
+    <p>
+      Triaging firmware and backend software bug JIRA tickets is slow and inconsistent today: an engineer has to
+      manually find the customer's CID, log into Partner Portal, pull diagnostic logs, reason about firmware
+      behavior, cross-check that reasoning against the FALCOR backend codebase, pull relevant event history, and
+      write up a coherent summary — all before anyone can even start fixing the actual bug.
+    </p>
+    <h3>Why it's automatable</h3>
+    <p>
+      Every piece of this already has a working building block available: a JIRA MCP integration for reading/writing
+      tickets, browser/Playwright automation for Partner Portal (login already validated end-to-end against a real
+      test CID), a local checkout of the FALCOR backend for code cross-referencing, and AI reasoning for the
+      judgment-call steps. This is assembly, not new capability.
+    </p>
+    <h3>Desired outcome</h3>
+    <p>
+      A flagged JIRA bug ticket automatically gets its CID's logs pulled from Partner Portal, analyzed against
+      firmware behavior and the FALCOR backend codebase plus event history, and ends up with a detailed,
+      evidence-cited draft report — reducing manual triage from hours to minutes, while a human still approves
+      anything that posts back to JIRA or triggers a real device action.
+    </p>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>What Changed</h2>
+    <p>
+      The prior architecture was a fully AI-agent-driven pipeline — a chain of four chat-native custom agents
+      (Orchestrator → Portal Log Collector → Firmware Log Triage → Bug Triage Synthesizer) that handled everything,
+      including the mechanical Partner Portal steps, inside interactive AI sessions.
+    </p>
+    <p>
+      This rebuild splits the pipeline explicitly by <strong>who/what performs each step</strong>, and reorders the
+      build so the deterministic, lowest-risk plumbing gets built and proven first:
+    </p>
+    <ul style="padding-left:20px; font-size:13px;">
+      <li>Steps that are mechanical, repeatable, and security-sensitive (portal login, log/event-history retrieval)
+        are deterministic Python/Playwright scripts — no AI judgment involved, no AI ever sees credentials.</li>
+      <li>Steps that are genuinely judgment calls (parsing logs into findings, cross-referencing against the backend
+        and event history, drafting a summary) stay AI-driven.</li>
+      <li>Posting the final summary to JIRA is its own explicit phase, separated from the analysis that produces it.</li>
+      <li>JIRA ticket-intake/watching (previously implicit in the Orchestrator) is now its own phase — and
+        deliberately the <em>lowest</em> priority, built last, since manual per-ticket triggering is good enough for
+        now.</li>
+    </ul>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>Phases</h2>
+    <table class="agent-table">
+      <tr>
+        <th>Phase</th><th>Description</th><th>Driven by</th>
+      </tr>
+      <tr>
+        <td><strong>Phase 0</strong></td>
+        <td>JIRA watch script — detects newly created/relevant tickets so the pipeline can be triggered without a human manually kicking it off per ticket.</td>
+        <td><span class="tag tag-manual">Deterministic</span> or <span class="tag tag-ai">AI</span> <span class="file-ref">(undecided)</span></td>
+      </tr>
+      <tr>
+        <td><strong>Phase 1</strong></td>
+        <td>Log into Partner Portal.</td>
+        <td><span class="tag tag-manual">Deterministic</span></td>
+      </tr>
+      <tr>
+        <td><strong>Phase 2</strong></td>
+        <td>Grab the logs and event history for a given customer/window and land them in the workspace.</td>
+        <td><span class="tag tag-manual">Deterministic</span></td>
+      </tr>
+      <tr>
+        <td><strong>Phase 3</strong></td>
+        <td>Parse the downloaded logs into a normalized, structured format for Phase 4 to consume.</td>
+        <td><span class="tag tag-manual">Deterministic</span></td>
+      </tr>
+      <tr>
+        <td><strong>Phase 4</strong></td>
+        <td>Add context from the <code>Alarm-backend</code> repo and event history to the parsed logs.</td>
+        <td><span class="tag tag-ai">Automated / AI</span></td>
+      </tr>
+      <tr>
+        <td><strong>Phase 5</strong></td>
+        <td>Post the resulting summary.</td>
+        <td><span class="tag tag-ai">Automated / AI</span></td>
+      </tr>
+    </table>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>Build Order</h2>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:12px;">
+      Not phase-numeric order — Phase 0 is deliberately built last, as the least important step.
+    </p>
+    <ol class="build-order">
+      <li>Phase 1 — Partner Portal login</li>
+      <li>Phase 2 — Log &amp; event history retrieval</li>
+      <li>Phase 3 — Log parsing</li>
+      <li>Phase 4 — Backend/event-history context</li>
+      <li>Phase 5 — Post summary</li>
+      <li class="deprioritized">Phase 0 — JIRA watch script</li>
+    </ol>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>Phase Detail: Inputs, Tools, Outputs</h2>
+    <table class="agent-table">
+      <tr>
+        <th>Phase</th><th>Inputs</th><th>Tools</th><th>Outputs</th>
+      </tr>
+      <tr>
+        <td><strong>Phase 1</strong><br/>Portal login</td>
+        <td>Env variable(s) storing 2FA/session credentials</td>
+        <td>Deterministic Python script reading credentials from environment variables; reuses the approach validated in <span class="file-ref">PARTNER-PORTAL-CAPABILITY-BRIEF.md</span></td>
+        <td>None besides a successful, confirmed login to Partner Portal</td>
+      </tr>
+      <tr>
+        <td><strong>Phase 2</strong><br/>Log &amp; EH retrieval</td>
+        <td>Customer CID, timestamp window</td>
+        <td>Deterministic Playwright test script at <code>playwright/recordings/phase2-portal-flow.spec.ts</code> using saved auth state; includes run-scoped artifact + manifest write for downstream AI handoff</td>
+        <td>Logs download saved under <code>artifacts/partner-portal/runs/&lt;runId&gt;/</code>, plus <code>manifest.json</code> and <code>artifacts/partner-portal/latest-run.json</code> pointer for Phase 3 pickup</td>
+      </tr>
+      <tr>
+        <td><strong>Phase 3</strong><br/>Log parsing</td>
+        <td>Phase 2 run folder (compressed or already extracted)</td>
+        <td>Deterministic Python script <code>phase3-log-parsing/phase3_parse_logs.py</code> (stdlib only — gzip/tarfile/re/json); no AI, no network calls</td>
+        <td><code>parsed-logs.jsonl</code> (normalized records across 4 verified log families) + <code>summary.json</code>, written to <code>parsed-logs/&lt;run-name&gt;/</code></td>
+      </tr>
+      <tr>
+        <td><strong>Phase 4</strong><br/>Backend/EH context</td>
+        <td>Parsed logs, HxGW2 repo, backend repo (<code>Alarm-backend</code>), event-history logs, JIRA ticket description</td>
+        <td>VS Code; JIRA MCP to pull the ticket description</td>
+        <td>Summary indicating where the problem lies, recommended code changes, and all context engineering needs to make the change</td>
+      </tr>
+      <tr>
+        <td><strong>Phase 5</strong><br/>Post summary</td>
+        <td>Phase 4 output</td>
+        <td>JIRA MCP</td>
+        <td>Posted JIRA comment</td>
+      </tr>
+      <tr>
+        <td><strong>Phase 0</strong><br/>JIRA watch</td>
+        <td>Newly created JIRA tickets</td>
+        <td>JIRA MCP (implementation otherwise undecided)</td>
+        <td>A parsed file of newly created JIRA tickets</td>
+      </tr>
+    </table>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>Phase 1 Operational Model (Non-AI Runner)</h2>
+    <p>
+      Phase 1 is intentionally deterministic and can be executed by a normal script runner (for example, a local shell session,
+      Task Scheduler, or another non-AI orchestrator). No AI layer is required for portal authentication.
+    </p>
+
+    <h3>How authentication works</h3>
+    <ul style="padding-left:20px; font-size:13px;">
+      <li>Credentials are loaded from local environment configuration: <code>PORTAL_URL</code>, <code>PORTAL_USERNAME</code>, <code>PORTAL_PASSWORD</code>, and <code>PORTAL_TOKEN</code>.</li>
+      <li><code>PORTAL_TOKEN</code> is the remembered-device value (<code>twoFactorAuthenticationId</code>) harvested once by a human from a successful login where "remember this device" is checked.</li>
+      <li>The login script injects this token before credential submit so normal runs bypass the interactive email 2FA prompt.</li>
+      <li>This is a trusted-device reuse mechanism, not permanent 2FA removal; token expiry still requires manual refresh.</li>
+    </ul>
+
+    <h3>Deterministic run sequence</h3>
+    <ol style="padding-left:20px; font-size:13px;">
+      <li>Run <code>scripts/login.py</code> as the first gate for any portal workflow.</li>
+      <li>Parse the single JSON status line from stdout and branch behavior by status.</li>
+      <li>On <code>success</code>, proceed to Phase 2 scripts (CID navigation, log/event-history retrieval).</li>
+      <li>On <code>2fa-required</code>, stop immediately and require human token re-harvest.</li>
+      <li>On <code>login-failed</code>, stop and alert for credential or portal-state investigation.</li>
+    </ol>
+
+    <h3>Operational guardrails for unattended execution</h3>
+    <ul style="padding-left:20px; font-size:13px;">
+      <li>Use least-privilege file access for local secret material (<code>.env</code>, <code>auth_state.json</code>).</li>
+      <li>Never print or persist secret values in logs; only emit status-level outcomes.</li>
+      <li>Keep secrets and downloaded artifacts gitignored; do not commit them under any circumstance.</li>
+      <li>Treat <code>2fa-required</code> as a hard stop condition in scheduler jobs (no blind retries).</li>
+    </ul>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>Phase 2 Operational Model (Non-AI Runner)</h2>
+    <p>
+      Phase 2 is now implemented as a deterministic Playwright flow and can be run by a normal script runner.
+      It does not require AI decision-making to navigate the portal and trigger log download.
+    </p>
+
+    <h3>Implemented deliverable (logs path)</h3>
+    <ul style="padding-left:20px; font-size:13px;">
+      <li>Primary script is <code>playwright/recordings/phase2-portal-flow.spec.ts</code>.</li>
+      <li>Flow includes Home → Find Customer → CID search → Command Catalog → AirFx legacy toolkit → Upload Panel Logs (Internal) → Bulk Download.</li>
+      <li>A deterministic refresh gate is included: 5 consecutive page refreshes, each spaced by 60 seconds, before upload/download actions continue.</li>
+    </ul>
+
+    <h3>Artifact contract for Phase 3</h3>
+    <ul style="padding-left:20px; font-size:13px;">
+      <li>Downloaded file is explicitly saved into workspace artifacts (not temp browser storage).</li>
+      <li>Per-run output folder: <code>artifacts/partner-portal/runs/&lt;runId&gt;/</code>.</li>
+      <li>Per-run manifest: <code>artifacts/partner-portal/runs/&lt;runId&gt;/manifest.json</code> containing CID, phase, timestamp, and saved file path.</li>
+      <li>Latest pointer file: <code>artifacts/partner-portal/latest-run.json</code> for Phase 3 "read latest" behavior.</li>
+    </ul>
+
+    <h3>Current scope limits</h3>
+    <ul style="padding-left:20px; font-size:13px;">
+      <li>Logs export path is implemented and validated.</li>
+      <li>Event-history export path is not implemented yet in the current deterministic runner.</li>
+      <li>The prior Python Phase 2 export script (<code>scripts/download_export.py</code>) was intentionally removed; current source of truth is the Playwright Phase 2 spec above.</li>
+    </ul>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>Phase 3 Operational Model (Non-AI Runner)</h2>
+    <p>
+      Phase 3 turned out to be fully deterministic once the log format was inspected against two real CID samples —
+      no AI judgment is needed to reshape raw exports into a structured, queryable format. AI only enters at Phase 4,
+      which reads this output rather than the raw archives.
+    </p>
+
+    <h3>Implemented deliverable</h3>
+    <ul style="padding-left:20px; font-size:13px;">
+      <li>Script is <code>phase3-log-parsing/phase3_parse_logs.py</code> — pure Python standard library (gzip, tarfile, re, json,
+        argparse); no external dependencies, no network calls.</li>
+      <li>Accepts either a still-compressed Phase 2 run folder (<code>Combined_AEL_Logs*.gz</code> +
+        <code>climax_logs.tgz</code>) or an already-extracted copy of the same tree — auto-detected.</li>
+      <li>Normalizes four distinct log families, each verified against real byte-level samples rather than assumed:
+        AEL text logs, Climax JSON config snapshots, an 11-field NUL-delimited tabular log family
+        (<code>debug*.log</code>, <code>system.log</code>, <code>alarm.log</code>), and a separate RX/TX
+        communication-trace format (<code>adcapp_debug*.log</code>, <code>usdk_debug*.log</code>).</li>
+      <li>Validated end-to-end against two real CID log pulls (CID 17803772 and CID 20954439 / CMX-6300), including a
+        spot-check confirming it correctly captures the exact LED brightness/state log lines behind a real,
+        already-fixed bug.</li>
+    </ul>
+
+    <h3>Output contract for Phase 4</h3>
+    <ul style="padding-left:20px; font-size:13px;">
+      <li>Per-run output folder: <code>parsed-logs/&lt;run-folder-name&gt;/</code>.</li>
+      <li><code>parsed-logs.jsonl</code> — one normalized JSON record per line, tagged by <code>source</code>
+        (<code>ael</code>, <code>config</code>, <code>climax_log</code>, <code>climax_comm_log</code>).</li>
+      <li>AEL records carry an <code>eid</code> (nullable numeric event id) and a <code>message_template</code>
+        (message text with variable numbers replaced by <code>#</code>) — deliberate, deterministic correlation
+        keys so Phase 4 can grep the <code>HxGW2</code> firmware repo for an exact <code>EID::e&lt;n&gt;</code>
+        call site or a literal <code>os_printf_d</code>/<code>os_printf_w</code> format string, instead of
+        fuzzy-matching text.</li>
+      <li><code>summary.json</code> — record counts per family plus input/output paths, mirroring Phase 2's
+        <code>manifest.json</code> convention.</li>
+    </ul>
+
+    <h3>Current scope limits</h3>
+    <ul style="padding-left:20px; font-size:13px;">
+      <li>Not yet wired to real Phase 2 output — validated only against manually supplied sample folders, since no
+        <code>artifacts/partner-portal/</code> folder exists in the workspace yet. Testing this connection is the
+        immediate next step.</li>
+      <li>The 8 unlabeled positional fields in the <code>climax_log</code> tabular family have undocumented semantic
+        meaning — kept positional rather than guessed; may need firmware source cross-referencing later if Phase 4
+        needs them.</li>
+      <li>Timestamp/timezone normalization across log families is intentionally deferred — raw timestamp strings are
+        preserved as-is.</li>
+      <li>Event-history export (from Phase 2) is not yet consumed by this parser — Phase 2 hasn't implemented that
+        export path yet either.</li>
+    </ul>
+  </section>
+
+  <!-- ============================================================ -->
+  <section>
+    <h2>Phase 4 Solution: Independent Search + Synthesis <span class="tag tag-ai">Automated / AI</span></h2>
+    <p>
+      Phase 4 uses <strong>three independent searches run with no cross-talk</strong> — HxGW2 (firmware), Alarm-backend (FALCOR),
+      and the Climax XML protocol document — each producing its own cited findings and a per-repository confidence
+      level, followed by a synthesis stage that cross-compares all three before producing the final report. Validated
+      live end-to-end against a real ticket (CMX-6300) with a real, already-merged fix commit as ground truth.
+    </p>
+
+    <h3>Flow</h3>
+    <div class="mermaid">
+flowchart TD
+    A["Parsed logs (Phase 3 output)<br/>parsed-logs.jsonl"] --> D
+    B["JIRA ticket<br/>(fetched via jira_get_issue)"] --> D
+    C["Time window<br/>(explicit start/end)"] --> D
+
+    D["build_phase4_input.py<br/>(deterministic, no AI)<br/>- slice logs to time window<br/>- check which sources exist on disk<br/>- write manifest"] --> E["phase4-input.json<br/>+ window-slice.jsonl"]
+
+    E --> F1
+    E --> F2
+    E --> F3
+
+    subgraph Independent["Three independent search legs — run with NO cross-talk"]
+        direction TB
+        F1["Phase 4 HxGW2 Search<br/>firmware repo ONLY"]
+        F2["Phase 4 Backend Search<br/>Alarm-backend ONLY"]
+        F3["Phase 4 Climax XML Search<br/>Climax XML doc ONLY"]
+
+        F1 --> F1a["a. Log/EID-anchored search"]
+        F1a --> F1b["b. Concept-keyword search<br/>(catches silent logic bugs<br/>with no distinct log line)"]
+        F1b --> F1c{"Is this a git repo?"}
+        F1c -->|yes| F1d["c. git log --grep ticket-key<br/>+ git merge-base --is-ancestor"]
+        F1c -->|no| F1e["skip to findings"]
+
+        F2 --> F2a["a. Log/concept-anchored search"]
+        F2a --> F2b["b. Concept-keyword search"]
+        F2b --> F2c["c. git history check"]
+
+        F3 --> F3check{"sources.climax_xml<br/>.available?"}
+        F3check -->|false| F3stop["status: source_unavailable"]
+        F3check -->|true| F3search["dual-mode search"]
+    end
+
+    F1d --> G1["findings + confidence:<br/>bug_is_in_hxgw2"]
+    F1e --> G1
+    F2c --> G2["findings + confidence:<br/>bug_is_in_backend"]
+    F3stop --> G3["confidence: not_available"]
+    F3search --> G3b["findings + confidence:<br/>bug_is_in_climax_xml"]
+
+    G1 --> H
+    G2 --> H
+    G3 --> H
+    G3b --> H
+
+    H["Phase 4 Synthesizer<br/>cross-compare all legs"]
+    H --> H2["1. Read all three leg outputs"]
+    H2 --> H3["2. Build cross-comparison table"]
+    H3 --> H4["3. Extract shared concept/identifier list<br/>and grep the OTHER repos for each one too"]
+    H4 --> H5["4. Version-control ground-truth check<br/>(git log --grep, is-ancestor)"]
+    H5 --> H6{"Concrete follow-up question<br/>a leg's finding raised?"}
+    H6 -->|yes, bounded| H7["5. Secondary search"]
+    H6 -->|no| H8
+    H7 --> H8
+    H8["6. Final Report"] --> I["Presented to human"]
+    </div>
+
+    <h3>Implemented deliverable</h3>
+    <ul style="padding-left:20px; font-size:13px;">
+      <li><code>phase4-log-triage/build_phase4_input.py</code> — deterministic (stdlib only) input builder. Slices
+        Phase 3's <code>parsed-logs.jsonl</code> to the ticket's time window, checks which knowledge bases actually
+        exist on disk, and writes one <code>phase4-input.json</code> manifest + a <code>window-slice.jsonl</code> —
+        the only things the AI legs ever see, never the raw multi-million-line logs or a hand-pasted ticket.</li>
+      <li><code>.github/agents/phase4-hxgw2-search.agent.md</code>, <code>phase4-backend-search.agent.md</code>,
+        <code>phase4-climax-xml-search.agent.md</code> — three independent search subagents, each scoped to exactly
+        one knowledge base, each running a two-step search (log/EID-anchored, then concept-keyword) plus a
+        version-control ground-truth check when the target is a git repo.</li>
+      <li><code>.github/agents/phase4-synthesizer.agent.md</code> — cross-compares the three leg outputs, extracts a
+        shared identifier list to trace across repos, checks version control for a ticket-referencing fix commit,
+        optionally runs one bounded secondary search, and produces the final report.</li>
+      <li><code>.github/agents/phase4-orchestrator.agent.md</code> — sequences the pipeline end-to-end.</li>
+    </ul>
+
+    <h3>Output contract</h3>
+    <ul style="padding-left:20px; font-size:13px;">
+      <li>Final report shape: problem restatement, RCA summary, areas searched, confidence per repository
+        (HxGW2 / Alarm-backend / Climax XML — <code>low | medium | high | not_available</code>), and a call to
+        action for potential code fixes.</li>
+      <li>The Climax XML leg fails safe: if <code>sources.climax_xml.available</code> is <code>false</code> in the
+        manifest, it reports <code>status: source_unavailable</code> rather than fabricating from training
+        knowledge — this is the current state, since the Climax XML document hasn't been converted into a
+        machine-readable form in this workspace yet.</li>
+    </ul>
+
+    <h3>Validated against CMX-6300 (real ticket, real ground truth)</h3>
+    <ul style="padding-left:20px; font-size:13px;">
+      <li>Ran the real ticket ("Flashing yellow LED #3 even though the panel is communicating over cellular")
+        through the HxGW2 and Alarm-backend legs plus synthesis. The HxGW2 leg's log/EID-anchored search
+        independently landed on <code>send_3LedPatternCommands()</code> in <code>CiAel_Hxgw.cc</code> — the exact
+        function later confirmed (via git history) to contain the real fix.</li>
+      <li>Confirmed via <code>git log --all --grep="CMX-6300"</code> inside the <code>adc_embedded_linux</code>
+        submodule that commit <code>179e4c861c</code> ("fixed the connectivity recovery pattern matching to ignore
+        the brightness") is the real fix, and <code>git merge-base --is-ancestor</code> confirmed it's already
+        merged into the checked-out HEAD — i.e. the code searched was already post-fix.</li>
+      <li><strong>Calibration lesson learned and now baked into the agents:</strong> a follow-up hypothesis built by
+        pattern-matching a plausible-sounding description (without checking the diff) was a red herring — a
+        different function that also compares LED brightness/state but wasn't what the real commit touched. Version
+        control, when available, must override a hypothesis that only "sounds right."</li>
+    </ul>
+
+    <h3>Current scope limits</h3>
+    <ul style="padding-left:20px; font-size:13px;">
+      <li>Climax XML leg is untested for real — the source document (<code>AlarmDotCom XML command.doc</code>,
+        confirmed by the user to be the Climax XML piece) is a legacy binary Word format; conversion attempts
+        (Word COM automation, raw byte extraction) haven't yet produced a clean machine-readable copy. Once a
+        text/HTML version is available, wire its path into <code>--climax-xml-path</code>.</li>
+      <li>Not yet wired to a real Phase 2 run's output — tested against the manually supplied
+        <code>_cmx6300-extract/</code> sample, same caveat as Phase 3.</li>
+      <li>Only validated on one ticket so far — still needs workshopping against more real tickets with known,
+        merged fix commits as ground truth before treating this design as proven.</li>
+    </ul>
+  </section>
+
+</div>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default' });
+</script>
+</body>
+</html>
