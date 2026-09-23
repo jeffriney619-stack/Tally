@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SMS Opt-In Form | Tally</title>
+    <style>
+      :root {
+        --ink: #1f2522;
+        --muted: #58635f;
+        --line: #d5dfd8;
+        --bg: #f4f8f4;
+        --card: #ffffff;
+        --accent: #1d5f47;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Arial, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 0% 0%, #e7f0e9 0%, transparent 40%),
+          radial-gradient(circle at 100% 100%, #e7f0ea 0%, transparent 44%),
+          var(--bg);
+      }
+
+      .wrap {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 30px 16px 60px;
+      }
+
+      .hero {
+        border: 1px solid #2d6f57;
+        border-radius: 14px;
+        padding: 20px;
+        color: #eef8f3;
+        background: linear-gradient(130deg, #194a39, #2b765a);
+      }
+
+      .hero h1 {
+        margin: 8px 0 6px;
+        font-size: clamp(1.8rem, 4.6vw, 2.7rem);
+      }
+
+      .card {
+        margin-top: 16px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--card);
+        padding: 20px;
+      }
+
+      label {
+        display: block;
+        margin-top: 12px;
+        font-size: 0.9rem;
+        font-weight: 600;
+      }
+
+      input[type="text"],
+      input[type="email"],
+      input[type="tel"] {
+        width: 100%;
+        margin-top: 6px;
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        font-size: 1rem;
+      }
+
+      .consent {
+        margin-top: 14px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: #fbfcfb;
+        padding: 12px;
+      }
+
+      .consent label {
+        display: flex;
+        gap: 10px;
+        margin-top: 0;
+        font-weight: 600;
+        line-height: 1.55;
+      }
+
+      .consent input { margin-top: 4px; }
+
+      .small {
+        margin-top: 10px;
+        color: var(--muted);
+        line-height: 1.55;
+        font-size: 0.92rem;
+      }
+
+      .button {
+        margin-top: 14px;
+        border: 0;
+        border-radius: 10px;
+        padding: 11px 16px;
+        color: #fff;
+        background: var(--accent);
+        font-size: 1rem;
+      }
+
+      .links {
+        margin-top: 12px;
+        font-size: 0.92rem;
+      }
+
+      .links a { color: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="hero">
+        <h1>Tally SMS Opt-In Form</h1>
+        <p>This public page shows the SMS consent checkbox and disclosure language users see before opting in.</p>
+      </header>
+
+      <section class="card">
+        <form action="#" method="post">
+          <label>
+            Full name
+            <input type="text" name="full_name" placeholder="Jane Doe" />
+          </label>
+
+          <label>
+            Email
+            <input type="email" name="email" placeholder="jane@example.com" />
+          </label>
+
+          <label>
+            Mobile number
+            <input type="tel" name="phone" placeholder="(555) 555-5555" />
+          </label>
+
+          <div class="consent">
+            <label>
+              <input type="checkbox" name="sms_opt_in" />
+              <span>
+                I agree to receive recurring transactional SMS messages from Tally related to account alerts, budget notifications, and transaction categorization prompts. Message frequency varies. Message and data rates may apply. Reply STOP to opt out or HELP for help. Consent is not a condition of purchase.
+              </span>
+            </label>
+          </div>
+
+          <button class="button" type="submit">Create Account</button>
+        </form>
+
+        <p class="small">This page is for public compliance visibility of opt-in language and form structure.</p>
+        <p class="links">
+          Legal links:
+          <a href="/privacy-policy.html">Privacy Policy</a>
+          |
+          <a href="/terms-and-conditions.html">Terms &amp; Conditions</a>
+        </p>
+      </section>
+    </div>
+  </body>
+</html>
