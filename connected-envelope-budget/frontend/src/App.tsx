@@ -4562,8 +4562,7 @@ function OnboardingWizard({
               <p className="eyebrow">Notifications</p>
               <h1>Where should we text you about new charges?</h1>
               <p className="onboarding-lead">
-                Simulated SMS — no real text messages are sent in this prototype. You can skip this
-                and add it later from Settings.
+                Add your number now, or skip this and add it later from Settings.
               </p>
               <label>
                 Mobile number
@@ -4579,8 +4578,17 @@ function OnboardingWizard({
                   onChange={(event) => setSmsConsent(event.target.checked)}
                   type="checkbox"
                 />
-                I agree to receive text messages from Tally about my purchases and budget. Reply
-                STOP at any time to opt out.
+                I agree to receive texts from Tally about new charges and my budget. Message
+                frequency varies based on my transactions. Message and data rates may apply. Reply
+                STOP to opt out or HELP for help. See our{' '}
+                <a href="/terms-and-conditions.html" rel="noopener noreferrer" target="_blank">
+                  Terms
+                </a>{' '}
+                and{' '}
+                <a href="/privacy-policy.html" rel="noopener noreferrer" target="_blank">
+                  Privacy Policy
+                </a>
+                .
               </label>
             </section>
           )}
@@ -5231,7 +5239,17 @@ function SettingsView({
                 onChange={(event) => toggleSmsConsent(event.target.checked)}
                 type="checkbox"
               />
-              Send me texts about my purchases and budget. Reply STOP any time to opt out.
+              I agree to receive texts from Tally about new charges and my budget. Message
+              frequency varies based on my transactions. Message and data rates may apply. Reply
+              STOP to opt out or HELP for help. See our{' '}
+              <a href="/terms-and-conditions.html" rel="noopener noreferrer" target="_blank">
+                Terms
+              </a>{' '}
+              and{' '}
+              <a href="/privacy-policy.html" rel="noopener noreferrer" target="_blank">
+                Privacy Policy
+              </a>
+              .
             </label>
           </section>
           <section className="settings-panel">
