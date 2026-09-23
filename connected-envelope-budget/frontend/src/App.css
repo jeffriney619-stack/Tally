@@ -3409,6 +3409,22 @@ tr.over .row-progress-fill {
   color: var(--forest);
   background: #dcece4;
 }
+.legal-links {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+.legal-links a {
+  color: var(--forest);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+.legal-links a:hover {
+  border-bottom-color: var(--forest);
+}
 .loading-screen {
   min-height: 100vh;
   display: flex;

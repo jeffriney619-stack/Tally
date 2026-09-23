@@ -80,6 +80,7 @@ import { TransactionReviewFlow } from './TransactionReview'
 import type {
   AdHocAdjustment,
   AssistantCategoryDraft,
+  AssistantSessionState,
   AuditEntry,
   BudgetCategory,
   BudgetGroup,
@@ -298,6 +299,107 @@ function normalizeArchivedCategories(state: PrototypeState): PrototypeState {
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function normalizeAssistantSession(input: unknown): AssistantSessionState | undefined {
+  if (!isRecord(input)) return undefined
+
+  const validStatuses: AssistantSessionState['status'][] = [
+    'in_progress',
+    'generating',
+    'ready',
+    'failed',
+    'accepted',
+    'abandoned',
+  ]
+  const defaultAnswers = createEmptyOnboardingAnswers()
+  const rawAnswers = isRecord(input.answers) ? input.answers : null
+
+  const hasAdaptiveShape =
+    !!rawAnswers &&
+    isRecord(rawAnswers.household) &&
+    isRecord(rawAnswers.essentials) &&
+    isRecord(rawAnswers.food) &&
+    isRecord(rawAnswers.fun) &&
+    isRecord(rawAnswers.transportation) &&
+    isRecord(rawAnswers.homeLife) &&
+    isRecord(rawAnswers.goals)
+
+  const answers = hasAdaptiveShape ? (rawAnswers as OnboardingAnswers) : defaultAnswers
+
+  const categoriesRaw = Array.isArray(input.categories) ? input.categories : []
+  const categories: AssistantCategoryDraft[] = categoriesRaw.flatMap((item, index) => {
+    if (!isRecord(item)) return []
+
+    const fallbackName = typeof item.customName === 'string' ? item.customName.trim() : ''
+    const name = typeof item.name === 'string' ? item.name.trim() : fallbackName
+    if (!name) return []
+
+    const rawGroup = typeof item.group === 'string' ? item.group.toLowerCase() : ''
+    const group =
+      rawGroup === 'needs' || rawGroup === 'wants' || rawGroup === 'savings' ? rawGroup : 'needs'
+
+    const rawSource = typeof item.source === 'string' ? item.source : ''
+    const source: AssistantCategoryDraft['source'] =
+      rawSource === 'rule' || rawSource === 'ai_custom' || rawSource === 'user_added'
+        ? rawSource
+        : rawSource === 'custom'
+          ? 'ai_custom'
+          : 'rule'
+
+    const answerKeys = Array.isArray(item.answerKeys)
+      ? item.answerKeys.filter((key): key is string => typeof key === 'string' && key.length > 0)
+      : []
+
+    return [
+      {
+        id: typeof item.id === 'string' && item.id.length > 0 ? item.id : crypto.randomUUID(),
+        name,
+        group,
+        source,
+        reason: typeof item.reason === 'string' ? item.reason : null,
+        answerKeys,
+        selected: typeof item.selected === 'boolean' ? item.selected : true,
+        displayOrder:
+          typeof item.displayOrder === 'number' && Number.isFinite(item.displayOrder)
+            ? item.displayOrder
+            : index,
+      },
+    ]
+  })
+
+  const currentSectionRaw = input.currentSection
+  const currentSection =
+    typeof currentSectionRaw === 'number' && Number.isFinite(currentSectionRaw)
+      ? Math.max(0, Math.min(6, Math.trunc(currentSectionRaw)))
+      : 0
+
+  const statusRaw = typeof input.status === 'string' ? input.status : ''
+  const status = validStatuses.includes(statusRaw as AssistantSessionState['status'])
+    ? (statusRaw as AssistantSessionState['status'])
+    : 'in_progress'
+
+  return {
+    status,
+    currentSection,
+    promptVersion:
+      typeof input.promptVersion === 'string' && input.promptVersion.trim().length > 0
+        ? input.promptVersion
+        : 'adaptive-onboarding-v1',
+    modelName: typeof input.modelName === 'string' ? input.modelName : undefined,
+    summary: typeof input.summary === 'string' ? input.summary : undefined,
+    answers,
+    categories,
+    templateName: typeof input.templateName === 'string' ? input.templateName : undefined,
+    updatedAt:
+      typeof input.updatedAt === 'string' && input.updatedAt.trim().length > 0
+        ? input.updatedAt
+        : new Date().toISOString(),
+  }
+}
+
 function App() {
   const AUTH_USERNAME_KEY = 'auth_username'
   const [state, setState] = useState<PrototypeState | null>(null)
@@ -355,7 +457,7 @@ function App() {
               vendorRules: saved.vendorRules ?? [],
               monthInReviews: saved.monthInReviews ?? [],
               obligationPayments: saved.obligationPayments ?? [],
-              assistantSession: saved.assistantSession,
+              assistantSession: normalizeAssistantSession(saved.assistantSession),
               debugCurrentDate: saved.debugCurrentDate,
             }
           : createBlankAccount(savedUsername)
@@ -405,7 +507,7 @@ function App() {
             vendorRules: saved.vendorRules ?? [],
             monthInReviews: saved.monthInReviews ?? [],
             obligationPayments: saved.obligationPayments ?? [],
-            assistantSession: saved.assistantSession,
+            assistantSession: normalizeAssistantSession(saved.assistantSession),
             debugCurrentDate: saved.debugCurrentDate,
           }
         : createBlankAccount(authResponse.username)
@@ -1264,6 +1366,15 @@ function AuthScreen({
             </>
           )}
           {message && <p className="form-message">{message}</p>}
+          <div className="legal-links" aria-label="Legal">
+            <a href="/privacy-policy.html" rel="noopener noreferrer" target="_blank">
+              Privacy Policy
+            </a>
+            <span aria-hidden="true">|</span>
+            <a href="/terms-and-conditions.html" rel="noopener noreferrer" target="_blank">
+              Terms &amp; Conditions
+            </a>
+          </div>
         </form>
       </section>
     </main>
