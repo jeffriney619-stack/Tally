@@ -1,3 +1,18 @@
+# Tally deploy script. Commits+pushes origin/main, then health-checks the
+# live Render backend and Vercel frontend (both auto-deploy from GitHub on
+# push — no Render/Vercel CLI or account access is needed here, just git).
+#
+# Prerequisites on ANY machine running this:
+#   - git installed and on PATH
+#   - Run from inside a clone of https://github.com/jeffriney619-stack/Tally
+#   - git must already be authenticated to push to that repo (GitHub login
+#     via Git Credential Manager, a PAT, or an SSH remote/key) — this script
+#     does not perform GitHub auth itself.
+#   - Windows: run via `powershell -ExecutionPolicy Bypass -File ...` if
+#     script execution is restricted. macOS/Linux: install PowerShell (pwsh)
+#     and run `pwsh ./scripts/push-main-and-verify.ps1 ...`, or just run the
+#     equivalent `git add -A; git commit -m "..."; git push origin main`
+#     manually and skip this script's health-check step.
 param(
     [Parameter(Mandatory = $false)]
     [string]$Message,
