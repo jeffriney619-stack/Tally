@@ -289,3 +289,63 @@ export async function runCleanSlate(
 
   return response.json() as Promise<CleanSlateResponse>
 }
+
+// AI transaction categorization pipeline (Tally_Transaction_AI_Categorization_Build_Plan.md).
+
+export type SuggestionSourceApi = 'vendor_rule' | 'deterministic' | 'ai' | 'fallback_keyword'
+
+export type TransactionCategorizationSuggestion = {
+  categoryId: string | null
+  confidence: number | null
+  explanation: string
+  evidenceIds: string[]
+  source: SuggestionSourceApi
+  needsInput: boolean
+  clarificationQuestion: string | null
+}
+
+export async function suggestTransactionCategory(input: {
+  username: string
+  transactionId: string
+  merchant: string
+  amount: number
+  date: string
+  envelopes: Array<{ id: string; name: string; description?: string | null }>
+  vendorRules: Array<{ vendorKey: string; categoryId: string; enabled: boolean }>
+}): Promise<TransactionCategorizationSuggestion> {
+  const response = await fetch(`${apiBaseUrl}/api/transaction-categorization/suggest`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  if (!response.ok) {
+    throw new Error("Tally couldn't generate a category suggestion for this transaction.")
+  }
+  return response.json() as Promise<TransactionCategorizationSuggestion>
+}
+
+export type CategorizationEventInput = {
+  username: string
+  vendorKey: string
+  transactionId: string
+  categoryId: string | null
+  eventType: string
+  amount: number
+  transactionDate: string
+}
+
+// Feedback write-back: every manual categorization, approval, rejection, correction, or
+// vendor-rule toggle is recorded here so it becomes future evidence for the pipeline.
+export async function recordCategorizationEvents(
+  events: CategorizationEventInput[],
+): Promise<void> {
+  if (events.length === 0) return
+  const response = await fetch(`${apiBaseUrl}/api/categorization-events`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(events),
+  })
+  if (!response.ok) {
+    throw new Error('Unable to record categorization feedback.')
+  }
+}

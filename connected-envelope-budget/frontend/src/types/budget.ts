@@ -11,9 +11,16 @@ export type BudgetCategory = {
   openingBalance: number
   warningThreshold: number
   archived: boolean
+  // What this envelope is *for*, in the user's own words (e.g. "Meals and activities
+  // specifically for date nights") — distinct from name, used to disambiguate
+  // similar envelopes for the AI categorization pipeline.
+  description?: string
 }
 
 export type BudgetMonth = { key: string; status: MonthStatus; closedAt?: string }
+
+// Source of a transaction's cached category suggestion (AI categorization pipeline).
+export type SuggestionSource = 'vendor_rule' | 'deterministic' | 'ai' | 'fallback_keyword' | null
 
 export type BudgetTransaction = {
   id: string
@@ -30,6 +37,13 @@ export type BudgetTransaction = {
   refundOfId?: string
   expectedRefund?: boolean
   categorizationSource?: string
+  // Cached result of the categorization pipeline, computed once at transaction
+  // creation time. Undefined/null until the pipeline has run.
+  suggestedCategoryId?: string | null
+  suggestionConfidence?: number | null
+  suggestionExplanation?: string | null
+  suggestionEvidenceIds?: string[]
+  suggestionSource?: SuggestionSource
 }
 
 export type ConnectedAccount = {

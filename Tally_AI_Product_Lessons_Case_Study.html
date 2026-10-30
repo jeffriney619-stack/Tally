@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="A case study and lesson guide on building AI/ML into a real product, using Tally's Transaction Review feature as the worked example.">
+<title>Building AI Into a Product — A Tally Case Study</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --ink: #18201d;
+    --muted: #58625d;
+    --paper: #f3f0e8;
+    --surface: #fffefa;
+    --line: #d4d8d0;
+    --green: #155c46;
+    --green-soft: #dcebe3;
+    --coral: #c4523f;
+    --coral-soft: #f4ded8;
+    --blue: #2d6482;
+    --blue-soft: #dceaf1;
+    --gold: #a87517;
+    --gold-soft: #f3e5c5;
+    --max: 980px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    background-color: var(--paper);
+    background-image:
+      linear-gradient(rgba(24, 32, 29, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(24, 32, 29, 0.04) 1px, transparent 1px);
+    background-size: 28px 28px;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 17px;
+    line-height: 1.68;
+  }
+  a { color: var(--blue); }
+  .sans, nav, .eyebrow, .tag, .label, .vocab-term { font-family: "Trebuchet MS", Verdana, sans-serif; }
+
+  header.hero {
+    color: white;
+    background: linear-gradient(100deg, rgba(18, 31, 26, 0.97) 0%, rgba(18, 31, 26, 0.88) 55%, rgba(21, 92, 70, 0.8) 100%);
+    border-bottom: 8px solid var(--coral);
+    padding: 64px 0 48px;
+  }
+  header.hero .inner { width: min(calc(100% - 36px), var(--max)); margin-inline: auto; }
+  .eyebrow {
+    display: inline-block;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 13px;
+    color: var(--gold-soft);
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.25);
+    padding: 6px 14px;
+    border-radius: 999px;
+    margin-bottom: 18px;
+  }
+  header.hero h1 { font-size: 2.6rem; margin: 0 0 14px; line-height: 1.15; }
+  header.hero p.lede { font-size: 1.15rem; max-width: 640px; color: rgba(255,255,255,0.86); margin: 0; }
+
+  main { width: min(calc(100% - 36px), var(--max)); margin-inline: auto; padding: 48px 0 80px; }
+
+  nav.toc {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 22px 26px;
+    margin-bottom: 48px;
+  }
+  nav.toc h2 { font-family: "Trebuchet MS", Verdana, sans-serif; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 12px; }
+  nav.toc ol { margin: 0; padding-left: 22px; columns: 2; column-gap: 32px; }
+  nav.toc li { margin-bottom: 6px; break-inside: avoid; }
+  nav.toc a { text-decoration: none; }
+  nav.toc a:hover { text-decoration: underline; }
+
+  section { margin-bottom: 56px; }
+  section > h2 {
+    font-size: 1.6rem;
+    color: var(--green);
+    border-bottom: 3px solid var(--green-soft);
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+  }
+  .question-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 6px solid var(--green);
+    border-radius: 10px;
+    padding: 22px 26px;
+    margin: 0 0 28px;
+  }
+  .question-card h3 { margin: 0 0 10px; font-size: 1.15rem; color: var(--ink); }
+  .question-card .stage-label {
+    display: inline-block;
+    font-family: "Trebuchet MS", Verdana, sans-serif;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--green);
+    background: var(--green-soft);
+    padding: 3px 10px;
+    border-radius: 999px;
+    margin-bottom: 10px;
+  }
+  .question-card .applied {
+    margin-top: 14px;
+    padding: 14px 16px;
+    background: var(--blue-soft);
+    border-radius: 8px;
+    font-size: 0.97rem;
+  }
+  .question-card .applied .label { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--blue); margin-bottom: 6px; }
+
+  .vocab-term {
+    background: var(--gold-soft);
+    border-radius: 5px;
+    padding: 1px 7px;
+    font-weight: bold;
+    font-size: 0.92em;
+    color: #6b4c0a;
+  }
+
+  .callout {
+    background: var(--coral-soft);
+    border: 1px solid #e3b7ab;
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin: 20px 0;
+  }
+  .callout .label { font-family: "Trebuchet MS", Verdana, sans-serif; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--coral); display: block; margin-bottom: 8px; }
+
+  .mermaid { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; margin: 18px 0; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.95rem; }
+  th, td { border: 1px solid var(--line); padding: 8px 12px; text-align: left; }
+  th { background: var(--green-soft); font-family: "Trebuchet MS", Verdana, sans-serif; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  tr:nth-child(even) td { background: rgba(0,0,0,0.015); }
+
+  .glossary dt { font-family: "Trebuchet MS", Verdana, sans-serif; font-weight: bold; color: var(--green); margin-top: 16px; }
+  .glossary dd { margin: 4px 0 0; }
+
+  code { background: rgba(0,0,0,0.06); padding: 1px 6px; border-radius: 4px; font-size: 0.9em; }
+
+  footer { text-align: center; color: var(--muted); font-size: 0.9rem; padding: 32px 0; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="inner">
+    <span class="eyebrow">Case Study &middot; Product + AI/ML</span>
+    <h1>Teaching Tally to Actually Understand a Transaction</h1>
+    <p class="lede">How a budgeting app's "completely inaccurate" category suggestions become a real,
+      evidence-grounded AI feature — without ever training a model. A worked case study in the
+      handful of questions every AI-assisted product eventually has to answer.</p>
+  </div>
+</header>
+
+<main>
+
+<nav class="toc">
+  <h2>In this document</h2>
+  <ol>
+    <li><a href="#story">The starting problem</a></li>
+    <li><a href="#myth">The myth to drop first: "training an AI"</a></li>
+    <li><a href="#q1">Question 1 — What's the model's job, precisely?</a></li>
+    <li><a href="#q2">Question 2 — Where does trustworthy evidence come from?</a></li>
+    <li><a href="#q3">Question 3 — How do you turn evidence into something interpretable?</a></li>
+    <li><a href="#q4">Question 4 — When do you trust it vs. defer to a human?</a></li>
+    <li><a href="#q5">Question 5 — How do you stop a bad output from causing damage?</a></li>
+    <li><a href="#q6">Question 6 — How does it improve without retraining?</a></li>
+    <li><a href="#q7">Question 7 — How do you know it's actually working?</a></li>
+    <li><a href="#case">Case study: the full pipeline, assembled</a></li>
+    <li><a href="#glossary">Vocabulary glossary</a></li>
+  </ol>
+</nav>
+
+<section id="story">
+  <h2>The starting problem</h2>
+  <p>Tally already has a working feature called <strong>Transaction Review</strong>: it groups a user's
+    uncategorized transactions by suggested envelope (Dining, Transportation, Dates, etc.), lets the
+    user approve or remove each suggestion, and optionally teach Tally to always suggest a category for
+    a given vendor in the future. The user experience was fully designed and built.</p>
+  <p>The problem was underneath it: the "suggestion" came from a hardcoded list of keywords
+    (<code>"coffee"</code> → Dining, <code>"gas"</code> → Transportation) with made-up confidence numbers
+    that didn't measure anything real. It was the same for every user, forever, and never got better.
+    This case study walks through how that gets replaced with something that actually learns from each
+    user's real behavior — and, along the way, surfaces the handful of questions that come up in
+    <em>any</em> product trying to add a genuine AI-assisted feature, not just this one.</p>
+</section>
+
+<section id="myth">
+  <h2>The myth to drop first: "training an AI"</h2>
+  <p>Most people hear "AI feature" and picture something that requires enormous datasets, GPUs, and
+    weeks of machine learning engineering — adjusting a model's internal numbers (its <span class="vocab-term">weights</span>)
+    through training. <strong>None of that happens here.</strong></p>
+  <p>Instead, this uses a technique called <span class="vocab-term">Retrieval-Augmented Generation (RAG)</span>:
+    a general-purpose pretrained model (OpenAI's GPT) never changes at all. What changes, request by
+    request, is the <em>evidence</em> handed to it in the prompt — the user's own history, growing richer
+    over time. The model supplies general reasoning ability; your own code supplies the facts that matter
+    for this specific decision.</p>
+  <div class="mermaid">
+flowchart LR
+    subgraph Fixed["Stays exactly the same, forever"]
+        M(("OpenAI GPT model"))
+    end
+    subgraph Growing["Grows richer over time"]
+        E1["Week 1: almost no evidence"]
+        E2["Month 3: real history + early corrections"]
+        E3["Month 12: hundreds of confirmed events"]
+    end
+    E1 -->|prompt| M --> R1["Weak, generic suggestion"]
+    E2 -->|prompt| M --> R2["Better, more specific suggestion"]
+    E3 -->|prompt| M --> R3["Strong, personalized suggestion"]
+  </div>
+  <p>"Tally gets smarter over time" means the evidence store grows — not that any model gets retrained.</p>
+</section>
+
+<section id="q1">
+  <h2>The seven recurring questions</h2>
+  <p>Every product that adds a real AI-assisted recommendation feature ends up answering the same
+    handful of questions, in roughly this order. Tally's transaction categorization feature is the
+    worked example for each one.</p>
+
+  <div class="question-card">
+    <span class="stage-label">Question 1</span>
+    <h3>What is the model's job, precisely?</h3>
+    <p>A vague instruction ("categorize this transaction") invites the model to guess at things it
+      can't actually know. A narrow, explicit instruction keeps it honest.</p>
+    <div class="applied">
+      <span class="label">Applied to Tally</span>
+      "Select the existing envelope best supported by this user's confirmed history and definitions.
+      Treat rejected suggestions as negative evidence. <strong>Do not invent purchase purpose.</strong>
+      Request input when the evidence cannot distinguish plausible destinations." That middle sentence
+      matters — the model should never claim to know <em>why</em> someone bought something beyond what
+      the evidence actually shows.
+    </div>
+  </div>
+
+  <div class="question-card" id="q2">
+    <span class="stage-label">Question 2</span>
+    <h3>Where does trustworthy evidence come from?</h3>
+    <p>You don't hand a model a user's entire history and hope it finds the relevant part — you
+      <span class="vocab-term">retrieve</span> just the slice that matters for this decision: same-vendor
+      history first, then comparable purchases, then explicit rules.</p>
+    <div class="applied">
+      <span class="label">Applied to Tally</span>
+      A new append-only log (<code>categorization_events</code>) records every confirmed categorization,
+      rejection, and correction, scoped per user. Retrieval means a simple filtered query — "give me
+      this user's history for this exact vendor" — not a search across everyone's data.
+    </div>
+  </div>
+
+  <div class="question-card">
+    <span class="stage-label">Question 3</span>
+    <h3>How do you turn raw evidence into something interpretable?</h3>
+    <p>This is classic <span class="vocab-term">feature engineering</span> — computing a handful of
+      countable, explainable summaries instead of asking the model to eyeball a pile of raw rows.</p>
+    <div class="applied">
+      <span class="label">Applied to Tally</span>
+      Instead of "mostly Dates," the signal is "6 confirmed Dates, 2 confirmed Dining, last 3 were
+      Dates, 1 historical rejection on record." Keeping exceptions visible (not smoothing them away)
+      is what lets the model — or a deterministic rule — reason about genuine ambiguity.
+    </div>
+  </div>
+
+  <div class="question-card" id="q4">
+    <span class="stage-label">Question 4</span>
+    <h3>When do you trust a recommendation vs. defer to a human?</h3>
+    <p>Sometimes called <span class="vocab-term">trust calibration</span> or <span class="vocab-term">selective
+      prediction</span>. Every confidence threshold trades <span class="vocab-term">precision</span>
+      (how often it's right when it speaks up) against <span class="vocab-term">recall / coverage</span>
+      (how often it speaks up at all) — raising the bar makes it righter but quieter; lowering it makes
+      it chattier but less trustworthy.</p>
+    <table>
+      <tr><th>Threshold</th><th>Precision</th><th>Recall</th></tr>
+      <tr><td>70%</td><td>82%</td><td>61%</td></tr>
+      <tr><td>85%</td><td>91%</td><td>44%</td></tr>
+      <tr><td>95%</td><td>98%</td><td>22%</td></tr>
+    </table>
+    <p style="font-size:0.9rem;color:var(--muted);margin-top:-8px;">(illustrative numbers — Tally's real
+      thresholds get set by actually measuring this, not guessing)</p>
+    <div class="applied">
+      <span class="label">Applied to Tally</span>
+      There's no single AI gate — there's a cascade: (1) an explicit vendor rule always wins outright;
+      (2) if the pipeline's <em>own</em> evidence-based confidence (not the model's self-reported
+      number) is extremely high, skip the model entirely and suggest directly; (3) only genuinely
+      ambiguous or thin-evidence cases are escalated to an actual model call.
+    </div>
+    <div class="mermaid">
+flowchart TD
+    A["New transaction"] --> B{"Explicit vendor rule?"}
+    B -- Yes --> C["Suggest directly — no AI call"]
+    B -- No --> D{"Evidence-based confidence >= ceiling?"}
+    D -- Yes --> E["Suggest directly — no AI call"]
+    D -- No --> F["Call the model<br/>(ambiguous / thin evidence)"]
+    </div>
+  </div>
+
+  <div class="question-card" id="q5">
+    <span class="stage-label">Question 5</span>
+    <h3>How do you stop a bad or hallucinated output from causing damage?</h3>
+    <p>Two separate checks, often conflated: is the response <em>well-formed and real</em> (structural
+      validation), and separately, is the response <em>well-supported enough to act on</em> (the
+      threshold question from Question 4). A model can pass the first check and still be a weak guess.</p>
+    <div class="applied">
+      <span class="label">Applied to Tally</span>
+      Never trust a model-returned envelope ID just because it looks plausible — check it against the
+      real list you actually sent it. Likewise, if the model cites specific evidence to justify its
+      answer, verify that evidence actually existed in what was sent — a model <em>can</em> write a
+      confident-sounding explanation that isn't actually grounded in anything real, sometimes called
+      <span class="vocab-term">hallucinated grounding</span>.
+    </div>
+  </div>
+
+  <div class="question-card" id="q6">
+    <span class="stage-label">Question 6</span>
+    <h3>How does it improve over time without retraining anything?</h3>
+    <p>Every user decision — approve, reject, correct, create a rule — becomes one more row of evidence
+      for the <em>next</em> decision. The model stays fixed; only what it's shown grows.</p>
+    <div class="applied">
+      <span class="label">Applied to Tally</span>
+      Approving a suggestion confirms it. Removing one is recorded as a real rejection — a permanent
+      negative signal, not something that "expires." This is what makes next month's suggestion for the
+      same vendor better than this month's, with zero model retraining involved.
+    </div>
+  </div>
+
+  <div class="question-card" id="q7">
+    <span class="stage-label">Question 7</span>
+    <h3>How do you know any of this is actually working?</h3>
+    <p>Not by intuition — by replaying real, labeled history through the pipeline and measuring it,
+      carefully avoiding <span class="vocab-term">look-ahead bias</span> (letting the evaluation "see"
+      data from after the point it's supposedly predicting, which quietly inflates how good a system
+      looks).</p>
+    <div class="applied">
+      <span class="label">Applied to Tally</span>
+      Two years of one household's real spending history becomes a development/testing asset: walk
+      through it chronologically, pretend you can only see what existed before each transaction, and
+      check whether the pipeline would have gotten it right. This is exactly where real precision/recall
+      numbers (Question 4's table) come from — not a guess.
+    </div>
+    <div class="callout">
+      <span class="label">A trap worth naming</span>
+      One household's real data proves the <em>mechanism</em> works on genuinely messy real-world data —
+      it does <strong>not</strong> prove the system generalizes to every user's different envelope setup.
+      Treating one person's data as "the template everyone should match" is a classic mistake called
+      <span class="vocab-term">overfitting</span> — tuning so precisely to one example that it fails to
+      generalize. Real confidence about generalization only comes from many different real users, over time.
+    </div>
+  </div>
+</section>
+
+<section id="case">
+  <h2>Case study: the full pipeline, assembled</h2>
+  <p>Put together, here's the complete request lifecycle for one transaction, showing exactly which
+    question above is answered by which stage:</p>
+  <div class="mermaid">
+flowchart TD
+    A["New transaction arrives"] --> B["Normalize merchant text"]
+    B --> C["Load this user's envelopes + definitions (Q2)"]
+    C --> D["Retrieve this user's evidence for this vendor (Q2)"]
+    D --> E["Compute signals: counts, trend, timing, rejections (Q3)"]
+    E --> F{"Vendor rule or high deterministic confidence? (Q4)"}
+    F -- Yes --> G["Suggest directly, no model call"]
+    F -- No --> H["Call OpenAI with evidence + signals"]
+    H --> I["Validate: real envelope? real cited evidence? (Q5)"]
+    I --> G
+    G --> J["Shown in Transaction Review"]
+    J --> K["User approves / rejects / corrects (Q6)"]
+    K -->|"new evidence row"| D
+    style F fill:#dcebe3,stroke:#155c46
+    style I fill:#dceaf1,stroke:#2d6482
+  </div>
+  <p>Everything above the user-decision box runs <em>before</em> the user ever sees Transaction Review —
+    suggestions are computed once, when a transaction is created, and simply read back when the review
+    screen opens. Everything below it is how the loop closes: the user's own decision becomes tomorrow's
+    evidence, with the model itself never changing at all.</p>
+</section>
+
+<section id="glossary">
+  <h2>Vocabulary glossary</h2>
+  <dl class="glossary">
+    <dt>Retrieval-Augmented Generation (RAG)</dt>
+    <dd>Feeding a fixed, pretrained model relevant facts at request time instead of training it on your data.</dd>
+    <dt>Cold start</dt>
+    <dd>The problem of having no history yet for a brand-new user or item, so a personalization system has nothing to retrieve.</dd>
+    <dt>Feature engineering</dt>
+    <dd>Turning raw data into the handful of countable, meaningful summaries a decision actually depends on.</dd>
+    <dt>Precision</dt>
+    <dd>Of the cases where a system spoke up confidently, how often was it actually right?</dd>
+    <dt>Recall / coverage</dt>
+    <dd>Of all the cases that existed, how many did the system confidently handle at all (vs. deferring)?</dd>
+    <dt>Trust calibration / selective prediction</dt>
+    <dd>Deciding when a system should act/recommend confidently versus defer to a human.</dd>
+    <dt>Hallucinated grounding</dt>
+    <dd>When a model's explanation sounds evidence-based but cites or implies facts that weren't actually supplied to it.</dd>
+    <dt>Look-ahead bias / data leakage</dt>
+    <dd>Accidentally letting an evaluation "see" information from after the point it's supposed to be predicting, which makes a system look better than it really is.</dd>
+    <dt>Overfitting</dt>
+    <dd>Tuning a system so precisely to one specific dataset/example that it fails to generalize to new, different cases.</dd>
+    <dt>Multi-tenancy (row-level scoping)</dt>
+    <dd>Many users' data living in one shared table/schema, isolated only by always filtering queries by an owner column — not by separate databases per user.</dd>
+    <dt>Cascade / tiered architecture</dt>
+    <dd>Cheap, deterministic logic resolves the easy majority of cases; an expensive model is reserved only for genuinely ambiguous ones.</dd>
+  </dl>
+</section>
+
+</main>
+
+<footer>Tally &middot; internal case study &middot; written alongside the Transaction Review AI/ML build plan</footer>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+</script>
+</body>
+</html>

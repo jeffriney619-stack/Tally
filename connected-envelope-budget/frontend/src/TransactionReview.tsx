@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { audit, money, shortDate } from './App'
 import { getCategoryIcon } from './categoryIcon'
 import { MoneyPlantMascot } from './MoneyPlantMascot'
-import { getSuggestion, MIN_SUGGESTION_CONFIDENCE } from './services/merchantCategorizer'
+import { type CategorizationEventInput, recordCategorizationEvents } from './services/api'
+import { MIN_SUGGESTION_CONFIDENCE, recommendCategory } from './services/merchantCategorizer'
 import type { AuditEntry, BudgetCategory, BudgetTransaction, PrototypeState } from './types/budget'
 
 const GROUP_ORDER: BudgetCategory['group'][] = ['Needs', 'Wants', 'Savings']
@@ -24,7 +25,6 @@ interface ReviewItem {
   transaction: BudgetTransaction
   vendorKey: string
   suggestedCategoryId: string | null
-  confidence: number
   status: ItemStatus
   vendorRuleEnabled: boolean
 }
@@ -43,28 +43,38 @@ function buildItems(
   vendorRules: PrototypeState['vendorRules'],
 ): ReviewItem[] {
   return transactions.map((transaction) => {
-    const recommendation = getSuggestion(transaction, categories)
     const vendorKey = normalizeVendor(transaction.merchant)
-    const target = categories.find((category) => category.id === recommendation.categoryId)
-    const confident = target !== undefined && recommendation.confidence >= MIN_SUGGESTION_CONFIDENCE
-    if (!confident) {
+
+    // undefined means the backend pipeline never ran on this transaction (legacy data
+    // from before this feature shipped) -- fall back to one last local guess. An
+    // explicit null means the pipeline ran and genuinely found nothing to suggest;
+    // don't second-guess that by re-guessing locally.
+    let suggestedCategoryId = transaction.suggestedCategoryId
+    if (suggestedCategoryId === undefined) {
+      const fallback = recommendCategory(transaction.merchant, categories)
+      suggestedCategoryId =
+        fallback.confidence >= MIN_SUGGESTION_CONFIDENCE ? fallback.categoryId : null
+    }
+
+    const target = suggestedCategoryId
+      ? categories.find((category) => category.id === suggestedCategoryId)
+      : undefined
+    if (!target) {
       return {
         transaction,
         vendorKey,
         suggestedCategoryId: null,
-        confidence: recommendation.confidence,
         status: 'unresolved-initial',
         vendorRuleEnabled: false,
       }
     }
     const existingRule = vendorRules.find(
-      (rule) => rule.vendorKey === vendorKey && rule.categoryId === recommendation.categoryId,
+      (rule) => rule.vendorKey === vendorKey && rule.categoryId === suggestedCategoryId,
     )
     return {
       transaction,
       vendorKey,
-      suggestedCategoryId: recommendation.categoryId,
-      confidence: recommendation.confidence,
+      suggestedCategoryId,
       status: 'suggested',
       vendorRuleEnabled: existingRule?.enabled ?? false,
     }
@@ -97,11 +107,13 @@ export function TransactionReviewFlow({
   transactions,
   onCommit,
   onExit,
+  username,
 }: {
   state: PrototypeState
   transactions: BudgetTransaction[]
   onCommit: (next: PrototypeState, entry?: AuditEntry) => Promise<boolean>
   onExit: () => void
+  username: string
 }) {
   const categories = useMemo(
     () => state.categories.filter((item) => !item.archived && item.group !== 'Savings'),
@@ -227,15 +239,31 @@ export function TransactionReviewFlow({
       vendorDecisions.set(item.vendorKey, item.status !== 'removed' && item.vendorRuleEnabled)
     }
     const nextVendorRules = state.vendorRules.slice()
+    const ruleEvents: CategorizationEventInput[] = []
     for (const [vendorKey, enabled] of vendorDecisions) {
       const idx = nextVendorRules.findIndex(
         (rule) => rule.vendorKey === vendorKey && rule.categoryId === category.id,
       )
+      const wasEnabled = idx >= 0 && nextVendorRules[idx].enabled
       if (enabled) {
         if (idx >= 0) nextVendorRules[idx] = { ...nextVendorRules[idx], enabled: true }
         else nextVendorRules.push({ vendorKey, categoryId: category.id, enabled: true })
       } else if (idx >= 0) {
         nextVendorRules.splice(idx, 1)
+      }
+      if (enabled !== wasEnabled) {
+        const representative = currentGroup.allItems.find((item) => item.vendorKey === vendorKey)
+        if (representative) {
+          ruleEvents.push({
+            username,
+            vendorKey,
+            transactionId: representative.transaction.id,
+            categoryId: category.id,
+            eventType: enabled ? 'rule_created' : 'rule_removed',
+            amount: representative.transaction.amount,
+            transactionDate: representative.transaction.date,
+          })
+        }
       }
     }
 
@@ -254,6 +282,31 @@ export function TransactionReviewFlow({
       setError("We couldn't save this group. Check your connection and try again.")
       return
     }
+
+    const feedbackEvents: CategorizationEventInput[] = [
+      ...keep.map((item) => ({
+        username,
+        vendorKey: item.vendorKey,
+        transactionId: item.transaction.id,
+        categoryId: category.id,
+        eventType: 'suggested_approved',
+        amount: item.transaction.amount,
+        transactionDate: item.transaction.date,
+      })),
+      ...removed.map((item) => ({
+        username,
+        vendorKey: item.vendorKey,
+        transactionId: item.transaction.id,
+        categoryId: category.id,
+        eventType: 'suggested_rejected',
+        amount: item.transaction.amount,
+        transactionDate: item.transaction.date,
+      })),
+      ...ruleEvents,
+    ]
+    recordCategorizationEvents(feedbackEvents).catch((error) => {
+      console.warn('Unable to record transaction review feedback events.', error)
+    })
 
     const nextItems = items.map((item) =>
       item.suggestedCategoryId === category.id && item.status !== 'removed'
@@ -299,6 +352,21 @@ export function TransactionReviewFlow({
       setError("We couldn't save that assignment. Check your connection and try again.")
       return
     }
+    // Items that came from a removed suggestion already had that rejection recorded
+    // in approveCurrentGroup -- only the final pick is new evidence here.
+    recordCategorizationEvents([
+      {
+        username,
+        vendorKey: current.vendorKey,
+        transactionId: current.transaction.id,
+        categoryId: category.id,
+        eventType: current.suggestedCategoryId ? 'corrected' : 'manual',
+        amount: current.transaction.amount,
+        transactionDate: current.transaction.date,
+      },
+    ]).catch((error) => {
+      console.warn('Unable to record manual review categorization event.', error)
+    })
     setManualIndex((index) => index + 1)
   }
 
@@ -372,6 +440,19 @@ export function TransactionReviewFlow({
       setError("We couldn't save that assignment. Check your connection and try again.")
       return
     }
+    recordCategorizationEvents([
+      {
+        username,
+        vendorKey: current.vendorKey,
+        transactionId: current.transaction.id,
+        categoryId: category.id,
+        eventType: current.suggestedCategoryId ? 'corrected' : 'manual',
+        amount: current.transaction.amount,
+        transactionDate: current.transaction.date,
+      },
+    ]).catch((error) => {
+      console.warn('Unable to record skipped review categorization event.', error)
+    })
     setSkippedIndex((index) => index + 1)
   }
 

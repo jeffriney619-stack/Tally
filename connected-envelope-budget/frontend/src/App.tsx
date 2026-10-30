@@ -63,17 +63,19 @@ import {
   getPrototypeState,
   getSmsConsent,
   login,
+  recordCategorizationEvents,
   runCleanSlate,
   savePrototypeState,
   saveSmsConsent,
   setAuthToken,
   signup,
+  suggestTransactionCategory,
 } from './services/api'
 import {
   generateRandomDateInMonth,
+  MIN_SUGGESTION_CONFIDENCE,
   pickRandomTransaction,
   recommendCategory,
-  suggestionCache as suggestions,
   type TransactionTemplate,
 } from './services/merchantCategorizer'
 import { TransactionReviewFlow } from './TransactionReview'
@@ -876,6 +878,21 @@ function App() {
       categorizationSource: 'Manual entry',
     }
 
+    // No suggestion was ever shown for this one — it's evidence from day one.
+    recordCategorizationEvents([
+      {
+        username,
+        vendorKey: transaction.merchant.trim().toLowerCase(),
+        transactionId: transaction.id,
+        categoryId: transaction.categoryId,
+        eventType: 'manual',
+        amount: transaction.amount,
+        transactionDate: transaction.date,
+      },
+    ]).catch((error) => {
+      console.warn('Unable to record manual categorization event.', error)
+    })
+
     commit(
       { ...loadedState, transactions: [transaction, ...loadedState.transactions] },
       audit('Manual transaction added', `${transaction.merchant} ${money(transaction.amount)} added.`),
@@ -1072,7 +1089,7 @@ function App() {
               onAddManualTransaction={addManualTransaction}
               onSimulate={() => {
                 if (isForecastMonth) return
-                simulateCharge(stateForMonth, commit)
+                void simulateCharge(username, stateForMonth, commit)
               }}
               onClearCategoryFilter={() => setCategoryFilter(null)}
             />
@@ -1095,6 +1112,7 @@ function App() {
               transactions={uncategorized}
               onCommit={commitReviewChange}
               onExit={() => navigate('dashboard')}
+              username={username}
             />
           )}
           {view === 'monthInReview' && selectedReviewMonth && (
@@ -1136,7 +1154,7 @@ function App() {
               state={state}
               input={smsInput}
               onInput={setSmsInput}
-              onSend={() => sendSms(state, smsInput, setSmsInput, commit)}
+              onSend={() => sendSms(username, state, smsInput, setSmsInput, commit)}
             />
           )}
           {view === 'activity' && <ActivityView state={state} />}
@@ -2725,9 +2743,9 @@ function InboxView({
       />
       <div className="inbox-list">
         {transactions.map((transaction) => {
-          const suggestion = suggestions[transaction.id]
-          const suggestedCategory = suggestion
-            ? state.categories.find((item) => item.id === suggestion.categoryId)
+          const suggestedCategoryId = transaction.suggestedCategoryId
+          const suggestedCategory = suggestedCategoryId
+            ? state.categories.find((item) => item.id === suggestedCategoryId)
             : undefined
           const suggestedName =
             suggestedCategory && suggestedCategory.group !== 'Savings' ? suggestedCategory.name : null
@@ -2784,15 +2802,15 @@ function InboxView({
                 ) : (
                   <>
                     <span>
-                      {suggestion
-                        ? suggestedName
-                          ? `Suggested: ${suggestedName} · ${suggestion.confidence}%`
-                          : 'Choose a category'
+                      {suggestedName
+                        ? transaction.suggestionConfidence != null
+                          ? `Suggested: ${suggestedName} · ${Math.round(transaction.suggestionConfidence * 100)}%`
+                          : `Suggested: ${suggestedName}`
                         : 'Choose a category'}
                     </span>
                     <select
                       aria-label={`Category for ${transaction.merchant}`}
-                      defaultValue={suggestion?.categoryId ?? ''}
+                      defaultValue={suggestedCategoryId ?? ''}
                       onChange={(event) =>
                         event.target.value &&
                         onSetPendingCategory(transaction.id, event.target.value)
@@ -4110,6 +4128,7 @@ function OnboardingWizard({
             <AdaptiveOnboarding
               initialAnswers={onboardingAnswers}
               initialSection={onboardingSection}
+              firstName={(nicknameInput || nameInput).trim().split(' ')[0] || ''}
               onCancel={() => setSetupMode(null)}
               onFinish={(envelopes, summary) => {
                 const assistantCategories: AssistantCategoryDraft[] = envelopes.map((item, index) => ({
@@ -5920,7 +5939,8 @@ function TransactionDrawer({
   )
 }
 
-function simulateCharge(
+async function simulateCharge(
+  username: string,
   state: PrototypeState,
   commit: (state: PrototypeState, entry?: AuditEntry) => void,
 ) {
@@ -5938,21 +5958,20 @@ function simulateCharge(
   // Pick a random transaction from the 100 examples
   const template = pickRandomTransaction(exampleTransactions)
   const transactionId = crypto.randomUUID()
+  const merchant = template['Transaction name']
 
   // Generate a random date evenly distributed across the current month
   const date = generateRandomDateInMonth(state.currentMonth)
 
-  // Generate a recommendation based on merchant name and available categories
-  const recommendation = recommendCategory(template['Transaction name'], state.categories)
-
-  // Add recommendation to suggestions object
-  suggestions[transactionId] = recommendation
+  const spendableCategories = state.categories.filter(
+    (category) => !category.archived && category.group !== 'Savings',
+  )
 
   const transaction: BudgetTransaction = {
     id: transactionId,
     date,
-    merchant: template['Transaction name'],
-    rawDescription: `SQ *${template['Transaction name'].toUpperCase()}`,
+    merchant,
+    rawDescription: `SQ *${merchant.toUpperCase()}`,
     amount: template.Cost,
     categoryId: null,
     accountId: account.id,
@@ -5961,16 +5980,55 @@ function simulateCharge(
     notes: '',
     spreadMonths: 1,
   }
+
+  // No real bank (Plaid-style) ingestion exists yet, so this simulated-charge flow is
+  // the primary way to exercise the real AI categorization pipeline end to end.
+  try {
+    const result = await suggestTransactionCategory({
+      username,
+      transactionId,
+      merchant,
+      amount: template.Cost,
+      date,
+      envelopes: spendableCategories.map((category) => ({
+        id: category.id,
+        name: category.name,
+        description: category.description ?? null,
+      })),
+      vendorRules: state.vendorRules.map((rule) => ({
+        vendorKey: rule.vendorKey,
+        categoryId: rule.categoryId,
+        enabled: rule.enabled,
+      })),
+    })
+    transaction.suggestedCategoryId = result.categoryId
+    transaction.suggestionConfidence = result.confidence
+    transaction.suggestionExplanation = result.explanation
+    transaction.suggestionEvidenceIds = result.evidenceIds
+    transaction.suggestionSource = result.source
+  } catch (error) {
+    console.warn('Transaction categorization pipeline unavailable, using local fallback.', error)
+    const fallback = recommendCategory(merchant, state.categories)
+    const confident = fallback.confidence >= MIN_SUGGESTION_CONFIDENCE
+    transaction.suggestedCategoryId = confident ? fallback.categoryId : null
+    transaction.suggestionConfidence = fallback.confidence / 100
+    transaction.suggestionExplanation = fallback.reason
+    transaction.suggestionEvidenceIds = []
+    transaction.suggestionSource = 'fallback_keyword'
+  }
+
   commit(
     { ...state, accounts, transactions: [transaction, ...state.transactions] },
     audit(
       'Bank charge received',
-      `${transaction.merchant} ${money(transaction.amount)} added to the uncategorized inbox. Suggested category: ${recommendation.reason}`,
+      `${transaction.merchant} ${money(transaction.amount)} added to the uncategorized inbox. Suggested category: ${transaction.suggestionExplanation}`,
     ),
   )
 }
 
+
 function sendSms(
+  username: string,
   state: PrototypeState,
   input: string,
   clear: (value: string) => void,
@@ -5985,7 +6043,8 @@ function sendSms(
   let transactions = state.transactions
   let entry: AuditEntry | undefined
   if (normalized === 'y' && waiting) {
-    const categoryId = suggestions[waiting.id]?.categoryId ?? 'shopping'
+    const suggestedCategoryId = waiting.suggestedCategoryId
+    const categoryId = suggestedCategoryId ?? 'shopping'
     const category = state.categories.find((item) => item.id === categoryId)
     transactions = state.transactions.map((item) =>
       item.id === waiting.id
@@ -6002,6 +6061,21 @@ function sendSms(
       'SMS confirmation',
       `${waiting.merchant} assigned to ${category?.name} after user replied Y.`,
     )
+    // Approving the suggested category is real evidence; falling back to the
+    // 'shopping' default with no suggestion shown is treated as unprompted.
+    recordCategorizationEvents([
+      {
+        username,
+        vendorKey: waiting.merchant.trim().toLowerCase(),
+        transactionId: waiting.id,
+        categoryId,
+        eventType: suggestedCategoryId ? 'suggested_approved' : 'manual',
+        amount: waiting.amount,
+        transactionDate: waiting.date,
+      },
+    ]).catch((error) => {
+      console.warn('Unable to record SMS categorization event.', error)
+    })
   } else if (normalized === 'm')
     body = state.categories
       .filter((item) => !item.archived)

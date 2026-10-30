@@ -871,14 +871,56 @@ function goalsRecommendations(answers: OnboardingAnswers['goals'], b: Recommenda
 
 const GROUP_SORT: Record<BudgetGroup, number> = { Needs: 0, Wants: 1, Savings: 2 }
 
+// Every answer-driven section gets its own small catch-all envelope — a
+// "junk drawer" for that area of spending — in addition to the single
+// universal Miscellaneous below. These are locked (like Miscellaneous)
+// because the whole point is that every section is guaranteed to have one.
+const SECTION_JUNK_DRAWERS: Array<{
+  source: EnvelopeRecommendationSource
+  id: string
+  name: string
+  group: BudgetGroup
+  areaLabel: string
+}> = [
+  { source: 'essentials', id: 'essentials-misc', name: 'Essentials Misc', group: 'Needs', areaLabel: 'essential expenses' },
+  { source: 'food', id: 'food-misc', name: 'Food Misc', group: 'Wants', areaLabel: 'food expenses' },
+  { source: 'fun', id: 'fun-misc', name: 'Fun & Lifestyle Misc', group: 'Wants', areaLabel: 'fun and lifestyle expenses' },
+  { source: 'transportation', id: 'transportation-misc', name: 'Transportation Misc', group: 'Needs', areaLabel: 'transportation expenses' },
+  { source: 'homeLife', id: 'home-life-misc', name: 'Home & Life Misc', group: 'Wants', areaLabel: 'home and life expenses' },
+  { source: 'goals', id: 'goals-misc', name: 'Goals Misc', group: 'Savings', areaLabel: 'savings and goals' },
+]
+
+function addSectionJunkDrawer(
+  b: RecommendationBuilder,
+  def: (typeof SECTION_JUNK_DRAWERS)[number],
+) {
+  b.add({
+    id: def.id,
+    name: def.name,
+    group: def.group,
+    purpose: `A junk drawer for ${def.areaLabel} that don't fit your other envelopes`,
+    reason: `Every section gets its own junk drawer for stray ${def.areaLabel}.`,
+    includes: [`small or unusual ${def.areaLabel}`],
+    excludes: ['anything that fits a more specific envelope in this section'],
+    source: def.source,
+    locked: true,
+  })
+}
+
 export function computeRecommendations(answers: OnboardingAnswers): EnvelopeRecommendation[] {
   const b = new RecommendationBuilder()
   essentialsRecommendations(answers.essentials, b)
+  addSectionJunkDrawer(b, SECTION_JUNK_DRAWERS[0])
   foodRecommendations(answers.food, b)
+  addSectionJunkDrawer(b, SECTION_JUNK_DRAWERS[1])
   funRecommendations(answers.fun, answers.household, b)
+  addSectionJunkDrawer(b, SECTION_JUNK_DRAWERS[2])
   transportationRecommendations(answers.transportation, b)
+  addSectionJunkDrawer(b, SECTION_JUNK_DRAWERS[3])
   homeLifeRecommendations(answers.homeLife, b)
+  addSectionJunkDrawer(b, SECTION_JUNK_DRAWERS[4])
   goalsRecommendations(answers.goals, b)
+  addSectionJunkDrawer(b, SECTION_JUNK_DRAWERS[5])
 
   // Miscellaneous is universal — always present, always last, never a fallback
   // for spending that already has a more specific applicable envelope.
@@ -898,55 +940,242 @@ export function computeRecommendations(answers: OnboardingAnswers): EnvelopeReco
   return b.list().sort((a, b2) => GROUP_SORT[a.group] - GROUP_SORT[b2.group])
 }
 
-export function buildLiveUnderstanding(answers: OnboardingAnswers): string[] {
-  const lines: string[] = []
-  const householdLabels: Record<HouseholdTypeNonNull, string> = {
-    solo: 'Just you',
-    couple: 'You and a partner',
-    family: 'A family with children',
-    shared: 'A shared household or roommates',
+function joinWithAnd(items: string[]): string {
+  if (items.length === 1) return items[0]
+  if (items.length === 2) return `${items[0]} and ${items[1]}`
+  return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`
+}
+
+function describeHouseholdPhilosophy(
+  household: OnboardingAnswers['household'],
+  name: string,
+): string | null {
+  if (!household.type) return null
+  const audienceLabel: Record<HouseholdTypeNonNull, string> = {
+    solo: 'a budget built just for themselves',
+    couple: 'a budget shared with a partner',
+    family: 'a family budget',
+    shared: 'a budget for a shared household',
   }
-  if (answers.household.type) {
-    lines.push(`Budgeting for: ${householdLabels[answers.household.type]}`)
+  const styleLabel: Record<string, string> = {
+    simple: 'kept intentionally simple, with broad envelopes and fewer decisions to make',
+    balanced:
+      'balanced between simplicity and detail, splitting things out only where it actually helps',
+    detailed: 'built with real precision, tracking spending down to the specific envelope',
   }
-  if (answers.household.detail) {
-    const detailLabels: Record<string, string> = {
-      simple: 'Simple — broader envelopes, fewer decisions',
-      balanced: 'Balanced — separate expenses where it helps',
-      detailed: 'Detailed — specific, granular envelopes',
-    }
-    lines.push(`Budget style: ${detailLabels[answers.household.detail]}`)
+  let sentence = `${name} is building ${audienceLabel[household.type]}`
+  if (household.detail) sentence += `, ${styleLabel[household.detail]}`
+  return `${sentence}.`
+}
+
+function describeEssentialsPhilosophy(answers: OnboardingAnswers['essentials']): string | null {
+  const { applicable, rentUtilities, insurance } = answers
+  if (applicable.length === 0 || applicable.includes('None')) return null
+  const clauses: string[] = []
+  if (applicable.includes('Rent/Mortgage') && applicable.includes('Utilities')) {
+    clauses.push(
+      rentUtilities === 'combine'
+        ? 'rent and utilities are handled together as one housing bill'
+        : 'rent and utilities each get their own envelope',
+    )
+  } else if (applicable.includes('Rent/Mortgage')) {
+    clauses.push('the rent or mortgage payment has its own dedicated envelope')
+  } else if (applicable.includes('Utilities')) {
+    clauses.push('utilities are tracked on their own')
   }
-  if (answers.essentials.applicable.length > 0 && !answers.essentials.applicable.includes('None')) {
-    lines.push(`Essential expenses confirmed: ${answers.essentials.applicable.join(', ')}`)
-  }
-  if (answers.food.areas.length > 0) {
-    lines.push(
-      answers.food.areas.includes('Keep All Food Together')
-        ? 'Food: kept together in one envelope'
-        : `Food organized around: ${answers.food.areas.join(', ')}`,
+  if (applicable.includes('Insurance')) {
+    clauses.push(
+      insurance === 'separate'
+        ? 'insurance is split out separately'
+        : 'insurance is kept as a steady fixed bill',
     )
   }
+  if (applicable.includes('Healthcare'))
+    clauses.push('healthcare spending is watched apart from insurance premiums')
+  if (applicable.includes('Childcare or School'))
+    clauses.push('childcare and school costs have a dedicated home')
+  if (applicable.includes('Personal Care')) clauses.push('personal care is budgeted for too')
+  if (clauses.length === 0) return null
+  return `On the essentials, ${joinWithAnd(clauses)}.`
+}
+
+function describeFoodPhilosophy(food: OnboardingAnswers['food']): string | null {
+  if (food.areas.length === 0) return null
+  if (food.areas.includes('Keep All Food Together')) {
+    return 'Food stays simple — groceries, takeout, and dining out all live in one envelope.'
+  }
+  const parts: string[] = []
+  if (food.areas.includes('Groceries')) parts.push('everyday groceries')
+  if (food.areas.includes('Routine Dining and Takeout')) parts.push('routine dining and takeout')
+  if (food.areas.includes('Date Nights')) parts.push('date nights')
+  if (food.areas.includes('Social Meals')) parts.push('meals with friends')
+  if (food.areas.includes('Health & Nutrition')) parts.push('health-focused food spending')
+  if (parts.length === 0) return null
+  return `Food is broken out with intention — ${joinWithAnd(parts)} each get their own envelope so everyday meals don't blur into special occasions.`
+}
+
+function describeFunPhilosophy(
+  fun: OnboardingAnswers['fun'],
+  household: OnboardingAnswers['household'],
+): string | null {
+  if (!fun.approach) return null
+  if (fun.approach === 'one')
+    return 'Recreational spending stays easy with a single shared Fun Money envelope covering shopping, entertainment, and hobbies.'
+  if (fun.approach === 'by_person')
+    return household.type !== 'solo'
+      ? 'Everyone gets their own Fun Money envelope, so personal spending never has to be justified to anyone else.'
+      : 'Fun money is kept personal, tracked on its own terms.'
+  if (fun.approach === 'by_category') {
+    return fun.categories.length > 0
+      ? `Recreational spending is split by category — ${joinWithAnd(fun.categories)} — instead of one catch-all fund.`
+      : 'Recreational spending is organized by category rather than lumped into one fund.'
+  }
+  return null
+}
+
+function describeTransportationPhilosophy(
+  transportation: OnboardingAnswers['transportation'],
+): string | null {
+  const parts: string[] = []
+  if (transportation.detail && transportation.detail !== 'none') {
+    const detailLabel: Record<string, string> = {
+      one: 'everyday transportation lives in a single envelope',
+      car_noncar: 'car costs are tracked apart from non-car transportation',
+      gas_maintenance_other:
+        'gas, maintenance, and other transportation costs are each broken out separately',
+    }
+    if (detailLabel[transportation.detail]) parts.push(detailLabel[transportation.detail])
+  }
+  if (transportation.trips) {
+    const tripsLabel: Record<string, string> = {
+      one: 'trips and vacations are saved for separately from the daily commute',
+      work_personal:
+        'work travel and personal trips are kept apart from each other and from everyday driving',
+      major_trips: 'big upcoming trips each get their own dedicated travel fund',
+      none: '',
+    }
+    if (tripsLabel[transportation.trips]) parts.push(tripsLabel[transportation.trips])
+  }
+  if (parts.length === 0) return null
+  return `Getting around is handled thoughtfully: ${joinWithAnd(parts)}.`
+}
+
+function describeHomeLifePhilosophy(homeLife: OnboardingAnswers['homeLife']): string | null {
+  const areas = homeLife.areas.filter((area) => area !== 'None')
+  if (areas.length === 0) return null
+  const parts: string[] = []
+  if (areas.includes('Pets')) parts.push('pet care')
+  if (areas.includes('Home Furniture, Repairs, or Projects')) parts.push('home projects and repairs')
+  if (areas.includes('Medical or Dental')) parts.push('medical and dental costs')
+  if (areas.includes('Subscriptions') || homeLife.subscriptions) parts.push('subscriptions')
+  if (areas.includes('Donations or Giving')) parts.push('giving')
+  if (areas.includes('Annual Bills')) parts.push('irregular annual bills')
+  if (parts.length === 0) return null
+  return `Life outside the basics is covered too, with room for ${joinWithAnd(parts)}.`
+}
+
+function describeGoalsPhilosophy(goals: OnboardingAnswers['goals']): string | null {
+  if (!goals.savingsApproach) return null
+  const label: Record<string, string> = {
+    emergency_plus: 'building an emergency fund while still growing additional savings on the side',
+    below_means: 'living below their means and letting whatever is left over flow straight into savings',
+    one_goal: `saving with a clear target in mind${goals.goalNames ? `: ${goals.goalNames}` : ''}`,
+    several_goals: `saving toward several goals at once${goals.goalNames ? `: ${goals.goalNames}` : ''}`,
+    not_saving: 'not actively saving yet, with that as the next thing to build toward',
+  }
+  let sentence = `When it comes to the future, this is about ${label[goals.savingsApproach]}`
+  const debts = goals.debtGoals.filter((debt) => debt !== 'None')
+  if (debts.length > 0) sentence += `, while chipping away at ${joinWithAnd(debts)}`
+  return `${sentence}.`
+}
+
+/**
+ * A "here's {name} in a nutshell" narrative paragraph built from the
+ * onboarding answers so far — the exciting, personal summary shown above the
+ * section-by-section breakdown.
+ */
+export function buildSpendingPhilosophy(answers: OnboardingAnswers, firstName: string): string {
+  const name = firstName.trim() || 'You'
+  const clauses = [
+    describeHouseholdPhilosophy(answers.household, name),
+    describeEssentialsPhilosophy(answers.essentials),
+    describeFoodPhilosophy(answers.food),
+    describeFunPhilosophy(answers.fun, answers.household),
+    describeTransportationPhilosophy(answers.transportation),
+    describeHomeLifePhilosophy(answers.homeLife),
+    describeGoalsPhilosophy(answers.goals),
+  ].filter((clause): clause is string => clause !== null)
+
+  if (clauses.length === 0) {
+    return `${name}'s curated spending philosophy will take shape here as questions are answered.`
+  }
+  return clauses.join(' ')
+}
+
+export type UnderstandingSection = {
+  key: string
+  label: string
+  lines: string[]
+}
+
+/** The answer-by-answer breakdown shown below the spending philosophy paragraph. */
+export function buildUnderstandingBreakdown(answers: OnboardingAnswers): UnderstandingSection[] {
+  const sections: UnderstandingSection[] = []
+
+  if (answers.essentials.applicable.length > 0 && !answers.essentials.applicable.includes('None')) {
+    sections.push({
+      key: 'essentials',
+      label: 'Essentials',
+      lines: [`Confirmed essentials: ${answers.essentials.applicable.join(', ')}`],
+    })
+  }
+
+  if (answers.food.areas.length > 0) {
+    sections.push({
+      key: 'food',
+      label: 'Food',
+      lines: [
+        answers.food.areas.includes('Keep All Food Together')
+          ? 'Kept together in one envelope'
+          : `Organized around: ${answers.food.areas.join(', ')}`,
+      ],
+    })
+  }
+
   if (answers.fun.approach) {
     const funLabels: Record<string, string> = {
       one: 'One shared Fun Money envelope',
       by_person: 'Separated by person',
       by_category: `By category: ${answers.fun.categories.join(', ') || 'not yet chosen'}`,
     }
-    lines.push(`Discretionary spending: ${funLabels[answers.fun.approach]}`)
+    sections.push({
+      key: 'fun',
+      label: 'Fun & Lifestyle',
+      lines: [funLabels[answers.fun.approach]],
+    })
   }
-  if (answers.transportation.costs.length > 0 || answers.transportation.trips) {
-    const parts: string[] = []
-    if (answers.transportation.detail)
-      parts.push(`everyday transportation is ${answers.transportation.detail.replace(/_/g, ' ')}`)
-    if (answers.transportation.trips)
-      parts.push(`trips are handled as ${answers.transportation.trips.replace(/_/g, ' ')}`)
-    if (parts.length > 0) lines.push(`Transportation & travel: ${parts.join('; ')}`)
+
+  const transportationLines: string[] = []
+  if (answers.transportation.detail)
+    transportationLines.push(
+      `Everyday transportation: ${answers.transportation.detail.replace(/_/g, ' ')}`,
+    )
+  if (answers.transportation.trips)
+    transportationLines.push(`Trips handled as: ${answers.transportation.trips.replace(/_/g, ' ')}`)
+  if (transportationLines.length > 0) {
+    sections.push({ key: 'transportation', label: 'Transportation & Travel', lines: transportationLines })
   }
+
   const lifeAreas = answers.homeLife.areas.filter((area) => area !== 'None')
   if (lifeAreas.length > 0) {
-    lines.push(`Life areas that apply: ${lifeAreas.join(', ')}`)
+    sections.push({
+      key: 'homeLife',
+      label: 'Home & Life',
+      lines: [`Applies to: ${lifeAreas.join(', ')}`],
+    })
   }
+
+  const goalsLines: string[] = []
   if (answers.goals.savingsApproach) {
     const savingsLabels: Record<string, string> = {
       emergency_plus: 'Building an emergency fund plus additional savings',
@@ -955,12 +1184,16 @@ export function buildLiveUnderstanding(answers: OnboardingAnswers): string[] {
       several_goals: `Saving toward: ${answers.goals.goalNames || 'several goals'}`,
       not_saving: 'Not actively saving yet',
     }
-    lines.push(savingsLabels[answers.goals.savingsApproach])
+    goalsLines.push(savingsLabels[answers.goals.savingsApproach])
   }
   if (answers.goals.debtGoals.length > 0 && !answers.goals.debtGoals.includes('None')) {
-    lines.push(`Paying down: ${answers.goals.debtGoals.join(', ')}`)
+    goalsLines.push(`Paying down: ${answers.goals.debtGoals.join(', ')}`)
   }
-  return lines
+  if (goalsLines.length > 0) {
+    sections.push({ key: 'goals', label: 'Savings & Goals', lines: goalsLines })
+  }
+
+  return sections
 }
 
 type HouseholdTypeNonNull = 'solo' | 'couple' | 'family' | 'shared'

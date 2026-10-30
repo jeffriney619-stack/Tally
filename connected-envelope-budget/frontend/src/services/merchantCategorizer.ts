@@ -274,45 +274,6 @@ export function recommendCategory(
 // transaction is routed to manual review instead.
 export const MIN_SUGGESTION_CONFIDENCE = 60
 
-// Suggestions are cached per-transaction-id as they're computed, mirroring the
-// existing pattern where a recommendation is generated once (e.g. when a bank
-// charge or SMS transaction is created) and reused everywhere that transaction
-// is displayed. Seeded with the original prototype's demo suggestions.
-export const suggestionCache: Record<string, Recommendation> = {
-  'tx-1004': {
-    categoryId: 'shopping',
-    confidence: 82,
-    reason: 'Similar Target purchases were Shopping.',
-  },
-  'tx-1005': {
-    categoryId: 'transport',
-    confidence: 96,
-    reason: 'Fuel merchants usually map to Transportation.',
-  },
-  'tx-1007': {
-    categoryId: 'shopping',
-    confidence: 68,
-    reason: 'Amazon varies, so this needs your confirmation.',
-  },
-  'tx-1010': {
-    categoryId: 'groceries',
-    confidence: 74,
-    reason: 'Likely a neighborhood grocery purchase.',
-  },
-}
-
-/** Returns the cached suggestion for a transaction, computing and caching one if needed. */
-export function getSuggestion(
-  transaction: { id: string; merchant: string },
-  availableCategories: BudgetCategory[],
-): Recommendation {
-  const cached = suggestionCache[transaction.id]
-  if (cached) return cached
-  const recommendation = recommendCategory(transaction.merchant, availableCategories)
-  suggestionCache[transaction.id] = recommendation
-  return recommendation
-}
-
 /**
  * Generate a random date evenly distributed across the given month
  * @param yearMonth format: "2026-09"

@@ -10,6 +10,7 @@ public sealed class BudgetDbContext(DbContextOptions<BudgetDbContext> options) :
     public DbSet<BudgetCategory> BudgetCategories => Set<BudgetCategory>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<SmsConsent> SmsConsents => Set<SmsConsent>();
+    public DbSet<CategorizationEvent> CategorizationEvents => Set<CategorizationEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -50,6 +51,14 @@ public sealed class BudgetDbContext(DbContextOptions<BudgetDbContext> options) :
         {
             consent.ToTable("sms_consent");
             consent.HasKey(item => item.Username);
+        });
+
+        modelBuilder.Entity<CategorizationEvent>(categorizationEvent =>
+        {
+            categorizationEvent.ToTable("categorization_events");
+            categorizationEvent.HasKey(item => item.Id);
+            categorizationEvent.HasIndex(item => new { item.Username, item.VendorKey });
+            categorizationEvent.Property(item => item.Amount).HasPrecision(12, 2);
         });
     }
 }

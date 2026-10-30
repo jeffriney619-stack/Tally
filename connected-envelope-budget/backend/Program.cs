@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text;
 using Backend.Data;
 using Backend.Models;
+using Backend.Services.Categorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -12,6 +13,9 @@ builder.Services.AddControllers();
 builder.Services.AddHttpClient();
 builder.Services.AddDbContext<BudgetDbContext>(options =>
 	options.UseSqlite(builder.Configuration.GetConnectionString("BudgetDatabase")));
+builder.Services.AddScoped<EvidenceRetrievalService>();
+builder.Services.AddSingleton<SignalComputationService>();
+builder.Services.AddScoped<DeterministicGateService>();
 
 var defaultCorsOrigins = new[]
 {
@@ -130,6 +134,25 @@ using (var scope = app.Services.CreateScope())
 		);
 		""");
 	database.Database.ExecuteSqlRaw("""
+		CREATE TABLE IF NOT EXISTS categorization_events (
+			Id TEXT NOT NULL PRIMARY KEY,
+			Username TEXT NOT NULL,
+			VendorKey TEXT NOT NULL,
+			TransactionId TEXT NOT NULL,
+			CategoryId TEXT NULL,
+			EventType TEXT NOT NULL,
+			Amount TEXT NOT NULL,
+			TransactionDate TEXT NOT NULL,
+			CreatedAt TEXT NOT NULL
+		);
+		""");
+	database.Database.ExecuteSqlRaw(
+		"CREATE INDEX IF NOT EXISTS IX_categorization_events_Username_VendorKey ON categorization_events (Username, VendorKey);");
+	// New nullable column on a table that may already exist from before this feature —
+	// CREATE TABLE IF NOT EXISTS above is a no-op once the table exists, so the column
+	// has to be added explicitly, once, if missing.
+	EnsureColumnExists(database, "budget_categories", "Description", "TEXT NULL");
+	database.Database.ExecuteSqlRaw("""
 		CREATE TABLE IF NOT EXISTS prototype_state (
 			id INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),
 			data TEXT NOT NULL,
@@ -179,6 +202,31 @@ app.MapControllers();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 
 app.Run();
+
+// Adds `column` to `table` only if it doesn't already exist — SQLite's ALTER TABLE ADD
+// COLUMN errors ("duplicate column name") if run twice, and has no IF NOT EXISTS form.
+static void EnsureColumnExists(BudgetDbContext database, string table, string column, string columnDefinitionSql)
+{
+	database.Database.OpenConnection();
+	using var checkCommand = database.Database.GetDbConnection().CreateCommand();
+	checkCommand.CommandText = $"PRAGMA table_info({table});";
+	using (var reader = checkCommand.ExecuteReader())
+	{
+		while (reader.Read())
+		{
+			if (string.Equals(reader.GetString(1), column, StringComparison.OrdinalIgnoreCase))
+			{
+				return;
+			}
+		}
+	}
+
+	// table/column/columnDefinitionSql are always call-site constants from our own code,
+	// never user input — SQL identifiers can't be parameterized anyway, so this is built
+	// as a plain string (not an interpolated literal) to satisfy the EF1002 analyzer.
+	var alterSql = "ALTER TABLE " + table + " ADD COLUMN " + column + " " + columnDefinitionSql + ";";
+	database.Database.ExecuteSqlRaw(alterSql);
+}
 
 // One-time, idempotent backfill: promotes categories/transactions embedded in each
 // username's JSON blob (budget_accounts.data) into the real budget_categories and

@@ -1,10 +1,12 @@
-import { ArrowLeft, Check, Sparkles, X } from 'lucide-react'
+import { ArrowLeft, Check, Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { getCategoryIcon } from './categoryIcon'
 import {
-  buildLiveUnderstanding,
+  buildSpendingPhilosophy,
+  buildUnderstandingBreakdown,
   computeRecommendations,
   type EnvelopeRecommendation,
+  type EnvelopeRecommendationSource,
   SAMPLE_TRANSACTIONS,
 } from './onboardingEngine'
 import type { BudgetGroup, HouseholdType, OnboardingAnswers } from './types/budget'
@@ -21,6 +23,30 @@ const SECTION_TITLES = [
   'Goals',
 ]
 
+// Maps each recommendation's originating answer section to a checklist
+// heading, so the review screen reads as "because you said X, consider Y"
+// instead of a flat Needs/Wants/Savings list.
+const RECOMMENDATION_SECTION_TITLES: Record<EnvelopeRecommendationSource, string> = {
+  essentials: 'Essentials',
+  food: 'Food',
+  fun: 'Fun & Lifestyle',
+  transportation: 'Transportation',
+  homeLife: 'Home & Life',
+  goals: 'Goals',
+  freeText: 'Added by you',
+  system: 'Always included',
+}
+const RECOMMENDATION_SECTION_ORDER: EnvelopeRecommendationSource[] = [
+  'essentials',
+  'food',
+  'fun',
+  'transportation',
+  'homeLife',
+  'goals',
+  'freeText',
+  'system',
+]
+
 function toggle(list: string[], value: string): string[] {
   return list.includes(value) ? list.filter((item) => item !== value) : [...list, value]
 }
@@ -28,12 +54,14 @@ function toggle(list: string[], value: string): string[] {
 export function AdaptiveOnboarding({
   initialAnswers,
   initialSection,
+  firstName,
   onProgress,
   onCancel,
   onFinish,
 }: {
   initialAnswers: OnboardingAnswers
   initialSection: number
+  firstName: string
   onProgress: (answers: OnboardingAnswers, section: number) => void
   onCancel: () => void
   onFinish: (envelopes: EnvelopeRecommendation[], summary: string) => void
@@ -46,17 +74,29 @@ export function AdaptiveOnboarding({
   const [error, setError] = useState('')
 
   const recommendations = useMemo(() => computeRecommendations(answers), [answers])
-  const liveUnderstanding = useMemo(() => buildLiveUnderstanding(answers), [answers])
+  const spendingPhilosophy = useMemo(
+    () => buildSpendingPhilosophy(answers, firstName),
+    [answers, firstName],
+  )
+  const understandingBreakdown = useMemo(() => buildUnderstandingBreakdown(answers), [answers])
 
   const [renames, setRenames] = useState<Record<string, string>>({})
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set())
+  // Envelopes the user adds themselves on the checklist screen, beyond what
+  // the answers alone suggested.
+  const [customItems, setCustomItems] = useState<EnvelopeRecommendation[]>([])
+
+  const allRecommendations = useMemo(
+    () => [...recommendations, ...customItems],
+    [recommendations, customItems],
+  )
 
   const finalEnvelopes = useMemo(
     () =>
-      recommendations
+      allRecommendations
         .filter((item) => !removedIds.has(item.id))
         .map((item) => (renames[item.id] ? { ...item, name: renames[item.id] } : item)),
-    [recommendations, removedIds, renames],
+    [allRecommendations, removedIds, renames],
   )
 
   const [txnIndex, setTxnIndex] = useState(0)
@@ -148,25 +188,48 @@ export function AdaptiveOnboarding({
     })
   }
 
+  function addCustomEnvelope(name: string, group: BudgetGroup) {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    setCustomItems((prev) => [
+      ...prev,
+      {
+        id: `custom-${crypto.randomUUID()}`,
+        name: trimmed,
+        group,
+        purpose: 'Added by you',
+        reason: 'You added this envelope yourself.',
+        includes: [],
+        excludes: [],
+        source: 'freeText',
+      },
+    ])
+  }
+
   function finish() {
     const summary = `Tally built ${finalEnvelopes.length} envelopes from your answers.`
     onFinish(finalEnvelopes, summary)
   }
 
+  const possessiveName = firstName.trim() ? `${firstName.trim()}'s` : 'Your'
+
   return (
     <div className="adaptive-onboarding">
       <aside className="adaptive-live-panel">
-        <h2>What Tally understands</h2>
-        {liveUnderstanding.length === 0 ? (
-          <p className="adaptive-live-empty">
-            Answer questions and Tally will summarize what it learns here.
-          </p>
-        ) : (
-          <ul>
-            {liveUnderstanding.map((line) => (
-              <li key={line}>{line}</li>
+        <h2>{possessiveName} curated spending philosophy</h2>
+        <p className="adaptive-philosophy">{spendingPhilosophy}</p>
+        {understandingBreakdown.length > 0 && (
+          <div className="adaptive-breakdown">
+            <h3>The breakdown</h3>
+            {understandingBreakdown.map((section) => (
+              <div className="adaptive-breakdown-section" key={section.key}>
+                <strong>{section.label}</strong>
+                {section.lines.map((line) => (
+                  <p key={line}>{line}</p>
+                ))}
+              </div>
             ))}
-          </ul>
+          </div>
         )}
         <p className="adaptive-live-reassurance">
           If Tally misunderstands something, change the answer before it becomes part of your
@@ -205,12 +268,13 @@ export function AdaptiveOnboarding({
 
         {phase === 'review' && (
           <ReviewPhase
-            recommendations={recommendations}
+            recommendations={allRecommendations}
             removedIds={removedIds}
             renames={renames}
             onRename={renameEnvelope}
             onRemove={removeEnvelope}
             onRestore={restoreEnvelope}
+            onAddCustom={addCustomEnvelope}
             onBack={() => setPhase('sections')}
             onContinue={() => setPhase('boundary-test')}
           />
@@ -1041,6 +1105,7 @@ function ReviewPhase({
   onRename,
   onRemove,
   onRestore,
+  onAddCustom,
   onBack,
   onContinue,
 }: {
@@ -1050,50 +1115,64 @@ function ReviewPhase({
   onRename: (id: string, name: string) => void
   onRemove: (id: string) => void
   onRestore: (id: string) => void
+  onAddCustom: (name: string, group: BudgetGroup) => void
   onBack: () => void
   onContinue: () => void
 }) {
-  const groups: BudgetGroup[] = ['Needs', 'Wants', 'Savings']
+  const [customName, setCustomName] = useState('')
+  const [customGroup, setCustomGroup] = useState<BudgetGroup>('Wants')
+  const checkedCount = recommendations.filter((item) => !removedIds.has(item.id)).length
+
   return (
     <section className="onboarding-step wide">
-      <p className="eyebrow">Recommendation review</p>
-      <h1>Here's the envelope set Tally built for you.</h1>
+      <p className="eyebrow">Recommendation checklist</p>
+      <h1>Based on your answers, here's what Tally recommends.</h1>
       <p className="onboarding-lead">
-        Rename or remove anything before continuing. Amounts come later.
+        Check off what you want to create as a real envelope, uncheck anything that doesn't fit,
+        and rename anything before continuing. Each section also gets its own "junk drawer" envelope
+        for the odds and ends that don't fit anywhere more specific. Amounts come later.
       </p>
-      {groups.map((group) => {
-        const items = recommendations.filter((item) => item.group === group)
+      {RECOMMENDATION_SECTION_ORDER.map((source) => {
+        const items = recommendations.filter((item) => item.source === source)
         if (items.length === 0) return null
+        const checkedInSection = items.filter((item) => !removedIds.has(item.id)).length
         return (
-          <section className={`adaptive-review-section ${group.toLowerCase()}`} key={group}>
+          <section className="adaptive-review-section" key={source}>
             <header className="adaptive-review-section-header">
-              <span className={`group-pill ${group.toLowerCase()}`}>{group}</span>
-              <small>{items.length} envelopes</small>
+              <span className="adaptive-review-section-title">
+                {RECOMMENDATION_SECTION_TITLES[source]}
+              </span>
+              <small>
+                {checkedInSection} of {items.length} checked
+              </small>
             </header>
             <div className="adaptive-review-list">
               {items.map((item) => {
                 const removed = removedIds.has(item.id)
+                const checked = !removed
                 return (
                   <div
-                    className={`adaptive-review-card ${group.toLowerCase()} ${removed ? 'removed' : ''}`}
+                    className={`adaptive-review-card ${item.group.toLowerCase()} ${removed ? 'removed' : ''}`}
                     key={item.id}
                   >
                     <div className="adaptive-review-card-header">
+                      <input
+                        checked={checked}
+                        disabled={item.locked}
+                        onChange={() => (checked ? onRemove(item.id) : onRestore(item.id))}
+                        title={checked ? 'Uncheck to skip this envelope' : 'Check to include this envelope'}
+                        type="checkbox"
+                      />
                       <input
                         disabled={removed}
                         onChange={(event) => onRename(item.id, event.target.value)}
                         value={renames[item.id] ?? item.name}
                       />
-                      {!item.locked && (
-                        <button
-                          onClick={() => (removed ? onRestore(item.id) : onRemove(item.id))}
-                          title={removed ? 'Restore envelope' : 'Remove envelope'}
-                          type="button"
-                        >
-                          {removed ? <Sparkles size={15} /> : <X size={15} />}
-                        </button>
-                      )}
+                      <span className={`group-pill ${item.group.toLowerCase()}`}>{item.group}</span>
                     </div>
+                    {item.locked && (
+                      <p className="adaptive-review-locked-note">Always included — a junk drawer for this section</p>
+                    )}
                     <p className="adaptive-review-reason">{item.reason}</p>
                     <p className="adaptive-review-boundary">
                       <strong>Includes:</strong> {item.includes.join(', ') || '—'}
@@ -1110,12 +1189,43 @@ function ReviewPhase({
           </section>
         )
       })}
+      <section className="adaptive-review-section adaptive-add-custom">
+        <header className="adaptive-review-section-header">
+          <span className="adaptive-review-section-title">Add one of your own</span>
+        </header>
+        <div className="adaptive-add-custom-row">
+          <input
+            onChange={(event) => setCustomName(event.target.value)}
+            placeholder="Envelope name"
+            value={customName}
+          />
+          <select
+            onChange={(event) => setCustomGroup(event.target.value as BudgetGroup)}
+            value={customGroup}
+          >
+            <option value="Needs">Needs</option>
+            <option value="Wants">Wants</option>
+            <option value="Savings">Savings</option>
+          </select>
+          <button
+            className="outline-action"
+            onClick={() => {
+              if (!customName.trim()) return
+              onAddCustom(customName, customGroup)
+              setCustomName('')
+            }}
+            type="button"
+          >
+            <Plus size={15} /> Add
+          </button>
+        </div>
+      </section>
       <div className="assistant-controls">
         <button className="text-button" onClick={onBack} type="button">
           <ArrowLeft size={15} /> Back to questions
         </button>
         <button className="primary-action" onClick={onContinue} type="button">
-          Test it with sample transactions
+          Test it with sample transactions ({checkedCount} selected)
         </button>
       </div>
     </section>

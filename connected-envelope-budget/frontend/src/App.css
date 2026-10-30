@@ -4012,19 +4012,39 @@ tr.over .row-progress-fill {
   font-size: 1.15rem;
   color: var(--forest);
 }
-.adaptive-live-panel ul {
+.adaptive-philosophy {
   margin: 0;
-  padding-left: 18px;
-  display: grid;
-  gap: 8px;
   color: var(--ink);
-  font-size: 0.78rem;
-  line-height: 1.45;
+  font-size: 0.84rem;
+  line-height: 1.55;
 }
-.adaptive-live-empty {
+.adaptive-breakdown {
+  display: grid;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.adaptive-breakdown h3 {
   margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--muted);
+}
+.adaptive-breakdown-section {
+  display: grid;
+  gap: 2px;
+}
+.adaptive-breakdown-section strong {
   font-size: 0.78rem;
+  color: var(--forest);
+}
+.adaptive-breakdown-section p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.76rem;
+  line-height: 1.4;
 }
 .adaptive-live-reassurance {
   margin: 4px 0 0;
@@ -4055,6 +4075,12 @@ tr.over .row-progress-fill {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 14px;
+}
+.adaptive-review-section-title {
+  font-family: "Newsreader", serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--forest);
 }
 .adaptive-review-section-header small {
   color: var(--muted);
@@ -4108,6 +4134,17 @@ tr.over .row-progress-fill {
   font: inherit;
   font-weight: 700;
 }
+.adaptive-review-card-header input[type='checkbox'] {
+  flex: none;
+  width: 17px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0;
+  border-radius: 4px;
+}
+.adaptive-review-card-header .group-pill {
+  flex-shrink: 0;
+}
 .adaptive-review-card-header button {
   display: grid;
   place-items: center;
@@ -4118,6 +4155,40 @@ tr.over .row-progress-fill {
   border-radius: 6px;
   background: white;
   cursor: pointer;
+}
+.adaptive-review-locked-note {
+  margin: 0;
+  color: var(--forest);
+  font-size: 0.7rem;
+  font-style: italic;
+}
+.adaptive-add-custom {
+  border-style: dashed;
+}
+.adaptive-add-custom-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.adaptive-add-custom-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+}
+.adaptive-add-custom-row select {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+}
+.adaptive-add-custom-row button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 .adaptive-review-reason {
   margin: 0;

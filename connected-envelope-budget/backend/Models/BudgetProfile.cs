@@ -25,4 +25,9 @@ public sealed class BudgetCategory
     public int WarningThreshold { get; set; } = 100;
     public bool Archived { get; set; }
     public int SortOrder { get; set; }
+
+    // What this envelope is *for*, in the user's own words (e.g. "Meals and activities
+    // specifically for date nights"). Used by the categorization pipeline to disambiguate
+    // similar envelopes (plan §3b) — distinct from Name, which is just a label.
+    public string? Description { get; set; }
 }
